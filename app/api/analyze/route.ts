@@ -8,6 +8,7 @@ import { getAreaPricing } from "@/src/services/statsService";
 import { computeAnalysis } from "@/src/services/scoringService";
 import { computeConfidence } from "@/src/services/confidenceService";
 import { classifyRepairs } from "@/src/services/repairClassificationService";
+import { mergeHousingData } from "@/src/services/mergeService";
 import { withTimeout } from "@/src/utils/withTimeout";
 import { log, logError } from "@/src/utils/logger";
 
@@ -38,15 +39,28 @@ export async function POST(req: NextRequest) {
     log(SERVICE, `File: ${file.name} (${Math.round(file.size / 1024)} KB)`);
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 2. PDF → text
+    // 2. Second file (optional)
+    const file2 = formData.get("file2");
+    const hasSecondFile = file2 instanceof File && file2.size > 0;
+
+    // 3. Extract from primary file
     const rawText = await extractPdfText(buffer);
-
-    // 3. Normalize
-    log(SERVICE, "Normalizing text...");
     const text = normalizeText(rawText);
+    log(SERVICE, "Normalizing text...");
 
-    // 4. LLM extraction (2-pass)
+    // 4. LLM extraction — primary
     let data = await extractHousingData(text);
+
+    // 4b. Extract from secondary file and merge
+    if (hasSecondFile) {
+      log(SERVICE, `Second file: ${file2.name} (${Math.round(file2.size / 1024)} KB)`);
+      const buffer2 = Buffer.from(await file2.arrayBuffer());
+      const rawText2 = await extractPdfText(buffer2);
+      const text2 = normalizeText(rawText2);
+      const data2 = await extractHousingData(text2);
+      data = mergeHousingData(data, data2);
+      log(SERVICE, "Documents merged");
+    }
 
     // 5. Validate
     data = validateHousingData(data);

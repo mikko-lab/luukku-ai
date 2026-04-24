@@ -17,7 +17,6 @@ function VerdictBadge({ verdict, score }: { verdict: AnalysisResult["verdict"]; 
     "HARKITSE TARKKAAN": "text-yellow-600 bg-yellow-50 border-yellow-200",
     "HYVÄ KOHDE": "text-green-600 bg-green-50 border-green-200",
   };
-
   return (
     <div className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${styles[verdict]}`}>
       <span className="text-7xl font-black leading-none">{score}</span>
@@ -34,14 +33,11 @@ function RepairRow({ repair }: { repair: UpcomingRepair }) {
       : repair.confidence === "medium"
         ? "bg-yellow-100 text-yellow-700"
         : "bg-gray-100 text-gray-600";
-
   return (
     <li className="flex items-center justify-between gap-4 py-3 border-b border-gray-100 last:border-0">
       <span className="font-medium text-gray-800">{repair.type}</span>
       <div className="flex items-center gap-2 shrink-0">
-        {repair.planned_year && (
-          <span className="text-sm text-gray-500">{repair.planned_year}</span>
-        )}
+        {repair.planned_year && <span className="text-sm text-gray-500">{repair.planned_year}</span>}
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge}`}>
           {CONFIDENCE_FI[repair.confidence] ?? repair.confidence}
         </span>
@@ -50,44 +46,80 @@ function RepairRow({ repair }: { repair: UpcomingRepair }) {
   );
 }
 
+function FileZone({
+  label,
+  hint,
+  fileName,
+  onFile,
+  optional,
+}: {
+  label: string;
+  hint: string;
+  fileName: string | null;
+  onFile: (f: File) => void;
+  optional?: boolean;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const f = e.dataTransfer.files[0];
+      if (f?.type === "application/pdf") onFile(f);
+    },
+    [onFile]
+  );
+
+  return (
+    <div
+      onDrop={handleDrop}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onClick={() => inputRef.current?.click()}
+      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-colors
+        ${dragOver ? "border-blue-400 bg-blue-50" : fileName ? "border-green-300 bg-green-50" : "border-gray-300 bg-white hover:border-gray-400"}`}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+      />
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+        {optional && <span className="text-xs text-gray-400">(valinnainen)</span>}
+      </div>
+      {fileName ? (
+        <p className="text-sm font-medium text-green-700 text-center">{fileName}</p>
+      ) : (
+        <p className="text-sm text-gray-500 text-center">{hint}</p>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [state, setState] = useState<AppState>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const fileRef = useRef<File | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((file: File) => {
-    if (file.type !== "application/pdf") {
-      setError("Vain PDF-tiedostot hyväksytään.");
-      return;
-    }
-    fileRef.current = file;
-    setFileName(file.name);
-    setError(null);
-    setResult(null);
-    setState("idle");
-  }, []);
+  const [file1, setFile1] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    },
-    [handleFile]
-  );
+  const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
+  const canAnalyze = !!file1;
 
   async function analyze() {
-    if (!fileRef.current) return;
+    if (!file1) return;
     setState("loading");
     setError(null);
 
     const form = new FormData();
-    form.append("file", fileRef.current);
+    form.append("file", file1);
+    if (file2) form.append("file2", file2);
 
     try {
       const res = await fetch("/api/analyze", { method: "POST", body: form });
@@ -101,7 +133,13 @@ export default function Home() {
     }
   }
 
-  const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
+  function reset() {
+    setState("idle");
+    setResult(null);
+    setFile1(null);
+    setFile2(null);
+    setError(null);
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-16">
@@ -110,47 +148,41 @@ export default function Home() {
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-gray-900">Asuntoanalyysi</h1>
           <p className="text-gray-500 mt-1">
-            Lataa isännöitsijäntodistus tai tilinpäätös — saat riskianalyysin muutamassa sekunnissa.
+            Lataa isännöitsijäntodistus ja/tai tilinpäätös — saat riskianalyysin muutamassa sekunnissa.
           </p>
         </div>
 
         {/* Upload */}
-        <div
-          onDrop={onDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onClick={() => inputRef.current?.click()}
-          className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-colors
-            ${dragOver ? "border-blue-400 bg-blue-50" : "border-gray-300 bg-white hover:border-gray-400"}`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+        <div className="grid grid-cols-2 gap-3">
+          <FileZone
+            label="Isännöitsijäntodistus"
+            hint="Vedä PDF tai klikkaa"
+            fileName={file1?.name ?? null}
+            onFile={setFile1}
           />
-          <svg className="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          {fileName ? (
-            <p className="text-sm font-medium text-blue-700">{fileName}</p>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-gray-700">Vedä tiedosto tähän tai klikkaa</p>
-              <p className="text-xs text-gray-400 mt-1">PDF, max 10 MB</p>
-            </>
-          )}
+          <FileZone
+            label="Tilinpäätös"
+            hint="Vedä PDF tai klikkaa"
+            fileName={file2?.name ?? null}
+            onFile={setFile2}
+            optional
+          />
         </div>
+
+        {file2 && !file1 && (
+          <p className="mt-2 text-xs text-amber-600">Lisää myös isännöitsijäntodistus parempaa analyysiä varten.</p>
+        )}
 
         {/* Analyze button */}
         <button
           onClick={analyze}
-          disabled={!fileName || state === "loading"}
+          disabled={!canAnalyze || state === "loading"}
           className="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm
             hover:bg-blue-700 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
-          {state === "loading" ? "Analysoidaan…" : "Analysoi"}
+          {state === "loading"
+            ? file2 ? "Analysoidaan kahta dokumenttia…" : "Analysoidaan…"
+            : "Analysoi"}
         </button>
 
         {/* Error */}
@@ -192,6 +224,7 @@ export default function Home() {
                 {result.extracted.confidence_percent && (
                   <p className="text-xs text-gray-400 mt-0.5">
                     Analyysin luotettavuus {result.extracted.confidence_percent}%
+                    {file2 ? " · 2 dokumenttia" : ""}
                   </p>
                 )}
               </div>
@@ -204,9 +237,7 @@ export default function Home() {
                   Tulevat remontit
                 </h2>
                 <ul>
-                  {knownRepairs.map((r, i) => (
-                    <RepairRow key={i} repair={r} />
-                  ))}
+                  {knownRepairs.map((r, i) => <RepairRow key={i} repair={r} />)}
                 </ul>
               </div>
             )}
@@ -255,7 +286,7 @@ export default function Home() {
             </details>
 
             <button
-              onClick={() => { setState("idle"); setResult(null); setFileName(null); fileRef.current = null; }}
+              onClick={reset}
               className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
             >
               Analysoi uusi tiedosto
