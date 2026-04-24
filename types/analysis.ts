@@ -28,10 +28,24 @@ export interface ExtractedData {
   red_flags_detected: RedFlag[];
 }
 
+export interface ScoringFactor {
+  label: string;
+  impact: number;
+  reason: string;
+}
+
 export interface AnalysisResult {
+  verdict: "ÄLÄ OSTA" | "HARKITSE TARKKAAN" | "HYVÄ KOHDE";
   risk_score: number;
   monthly_cost: number;
+  market_position: "overpriced" | "fair" | "undervalued";
+  confidence: number;
+  factors: ScoringFactor[];
   upcoming_repairs: UpcomingRepair[];
   red_flags: string[];
-  extracted: ExtractedData;
+  extracted: ExtractedData & {
+    confidence_percent?: number;
+    confidence_level?: "low" | "medium" | "high";
+    missing_fields?: string[];
+  };
 }

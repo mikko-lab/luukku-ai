@@ -5,20 +5,23 @@ import type { AnalysisResult, UpcomingRepair } from "@/types/analysis";
 
 type AppState = "idle" | "loading" | "done" | "error";
 
-function RiskBadge({ score }: { score: number }) {
-  const color =
-    score >= 7
-      ? "text-red-600 bg-red-50 border-red-200"
-      : score >= 4
-        ? "text-yellow-600 bg-yellow-50 border-yellow-200"
-        : "text-green-600 bg-green-50 border-green-200";
+const CONFIDENCE_FI: Record<string, string> = {
+  high: "varma",
+  medium: "epävarma",
+  low: "alustava",
+};
 
-  const label = score >= 7 ? "Korkea riski" : score >= 4 ? "Kohtalainen" : "Matala riski";
+function VerdictBadge({ verdict, score }: { verdict: AnalysisResult["verdict"]; score: number }) {
+  const styles: Record<AnalysisResult["verdict"], string> = {
+    "ÄLÄ OSTA": "text-red-600 bg-red-50 border-red-200",
+    "HARKITSE TARKKAAN": "text-yellow-600 bg-yellow-50 border-yellow-200",
+    "HYVÄ KOHDE": "text-green-600 bg-green-50 border-green-200",
+  };
 
   return (
-    <div className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${color}`}>
+    <div className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${styles[verdict]}`}>
       <span className="text-7xl font-black leading-none">{score}</span>
-      <span className="text-sm font-semibold mt-1 tracking-wide uppercase">{label}</span>
+      <span className="text-sm font-bold mt-2 tracking-wide">{verdict}</span>
       <span className="text-xs opacity-60 mt-0.5">/ 10</span>
     </div>
   );
@@ -40,7 +43,7 @@ function RepairRow({ repair }: { repair: UpcomingRepair }) {
           <span className="text-sm text-gray-500">{repair.planned_year}</span>
         )}
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge}`}>
-          {repair.confidence}
+          {CONFIDENCE_FI[repair.confidence] ?? repair.confidence}
         </span>
       </div>
     </li>
@@ -98,6 +101,8 @@ export default function Home() {
     }
   }
 
+  const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
+
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-16">
       <div className="w-full max-w-xl">
@@ -105,7 +110,7 @@ export default function Home() {
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-gray-900">Asuntoanalyysi</h1>
           <p className="text-gray-500 mt-1">
-            Lataa isännöitsijäntodistus tai tilinpäätös — saat riskianalyysin sekunteja.
+            Lataa isännöitsijäntodistus tai tilinpäätös — saat riskianalyysin muutamassa sekunnissa.
           </p>
         </div>
 
@@ -167,9 +172,9 @@ export default function Home() {
         {/* Results */}
         {state === "done" && result && (
           <div className="mt-8 space-y-4">
-            {/* Score + cost */}
+            {/* Verdict + cost */}
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-8">
-              <RiskBadge score={result.risk_score} />
+              <VerdictBadge verdict={result.verdict} score={result.risk_score} />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Arvioitu todellinen kuukausikulu
@@ -184,17 +189,22 @@ export default function Home() {
                     {result.extracted.building_year && ` · Rak. ${result.extracted.building_year}`}
                   </p>
                 )}
+                {result.extracted.confidence_percent && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Analyysin luotettavuus {result.extracted.confidence_percent}%
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Upcoming repairs */}
-            {result.upcoming_repairs.length > 0 && (
+            {knownRepairs.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
                   Tulevat remontit
                 </h2>
                 <ul>
-                  {result.upcoming_repairs.map((r, i) => (
+                  {knownRepairs.map((r, i) => (
                     <RepairRow key={i} repair={r} />
                   ))}
                 </ul>
