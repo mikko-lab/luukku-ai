@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import type { AnalysisResult } from "@/types/analysis";
 
 const CONFIDENCE_FI: Record<string, string> = {
@@ -149,9 +149,10 @@ function verdictColors(verdict: AnalysisResult["verdict"]) {
 interface Props {
   result: AnalysisResult;
   address: string;
+  brokerLogo?: string;
 }
 
-export function ReportPDF({ result, address }: Props) {
+export function ReportPDF({ result, address, brokerLogo }: Props) {
   const colors = verdictColors(result.verdict);
   const e = result.extracted;
   const today = new Date().toLocaleDateString("fi-FI");
@@ -170,7 +171,12 @@ export function ReportPDF({ result, address }: Props) {
             <Text style={styles.productName}>Luukku AI — Asuntoanalyysi</Text>
             <Text style={styles.address}>{address || "Kohde"}</Text>
           </View>
-          <Text style={styles.date}>{today}</Text>
+          <View style={{ alignItems: "flex-end" }}>
+            {brokerLogo && (
+              <Image src={brokerLogo} style={{ height: 28, objectFit: "contain", marginBottom: 4 }} />
+            )}
+            <Text style={styles.date}>{today}</Text>
+          </View>
         </View>
 
         {/* Verdict */}
