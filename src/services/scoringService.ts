@@ -50,13 +50,81 @@ function estimateRepairCost(type: string, size_m2: number | null): number {
   return size_m2 ? size_m2 * 150 : 9_000;
 }
 
-function isMajor(r: UpcomingRepair | { category?: string; type: string }): boolean {
-  return r.category === "major";
+/* ------------------------------------------------------------------ */
+/*  Repair impact map  (negative = reduces risk)                        */
+/* ------------------------------------------------------------------ */
+
+const REPAIR_IMPACT: Record<string, { weight: number; category: string }> = {
+  putkiremontti:    { weight: -3,   category: "major" },
+  linjasaneeraus:   { weight: -3,   category: "major" },
+  julkisivu:        { weight: -2,   category: "major" },
+  julkisivuremontti:{ weight: -2,   category: "major" },
+  kattoremontti:    { weight: -2,   category: "major" },
+  katto:            { weight: -2,   category: "major" },
+  peruskorjaus:     { weight: -2.5, category: "major" },
+  ikkunat:          { weight: -1,   category: "medium" },
+  ilmanvaihto:      { weight: -1,   category: "medium" },
+  lämpöpumppu:      { weight: -0.3, category: "minor" },
+  vesikouru:        { weight: -0.2, category: "minor" },
+  maalaus:          { weight: -0.2, category: "minor" },
+};
+
+function calculateRepairImpact(renovations: HousingData["repairs"]["last_major"]): number {
+  let impact = 0;
+  for (const r of renovations) {
+    // Pre-2000 repairs no longer "save" the building
+    if (r.year !== null && r.year < 2000) continue;
+
+    const t = r.type.toLowerCase();
+    const key = Object.keys(REPAIR_IMPACT).find((k) => t.includes(k));
+    if (key) impact += REPAIR_IMPACT[key].weight;
+  }
+  return impact;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Building risk model                                                  */
+/* ------------------------------------------------------------------ */
+
+function buildingRiskModel(
+  buildingYear: number,
+  repairs: HousingData["repairs"]
+): { risk: number; flags: string[] } {
+  const age = CURRENT_YEAR - buildingYear;
+  let risk = 0;
+  const flags: string[] = [];
+
+  const hasDone = (keyword: string) =>
+    repairs.last_major.some((r) => r.type.toLowerCase().includes(keyword));
+  const hasPlanned = (keyword: string) =>
+    repairs.upcoming.some((r) => r.type.toLowerCase().includes(keyword));
+  const has = (keyword: string) => hasDone(keyword) || hasPlanned(keyword);
+
+  if (age > 40 && !has("putki") && !has("linjasaneeraus")) {
+    risk += 3;
+    flags.push("Putkiremontti todennäköinen lähivuosina");
+  }
+
+  if (age > 35 && !has("julkisivu")) {
+    risk += 2;
+    flags.push("Julkisivuremontti mahdollinen");
+  }
+
+  if (age > 30 && !has("katto")) {
+    risk += 1.5;
+    flags.push("Kattoremontti lähestyy");
+  }
+
+  return { risk, flags };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Upcoming major repair check                                          */
+/* ------------------------------------------------------------------ */
 
 function soonMajorRepairs(upcoming: UpcomingRepair[], withinYears: number): UpcomingRepair[] {
   return upcoming.filter(
-    (r) => isMajor(r) && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + withinYears)
+    (r) => r.category === "major" && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + withinYears)
   );
 }
 
@@ -70,7 +138,28 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
 
   const { financials: f, building: b, repairs: r } = data;
 
-  // ── Upcoming major repairs ──────────────────────────────────────────
+  // ── Building risk model ───────────────────────────────────────────────
+  if (b.year !== null) {
+    const building = buildingRiskModel(b.year, r);
+    const repairImpact = calculateRepairImpact(r.last_major);
+    const netImpact = Math.round((building.risk + repairImpact) * 10) / 10;
+
+    if (netImpact !== 0) {
+      factors.push({
+        label: netImpact > 0 ? "Rakennuksen ikä & puuttuvat remontit" : "Remontit tehty hyvin",
+        impact: netImpact,
+        reason: building.flags.length > 0 ? building.flags.join(", ") : `Rak. ${b.year}`,
+      });
+      score += netImpact;
+    }
+
+    // Attach building flags to factors so generateRedFlags picks them up
+    for (const flag of building.flags) {
+      factors.push({ label: flag, impact: 0, reason: `Rak. ${b.year}` });
+    }
+  }
+
+  // ── Upcoming major repairs ────────────────────────────────────────────
   const soon5 = soonMajorRepairs(r.upcoming, 5);
   const soon10 = soonMajorRepairs(r.upcoming, 10);
 
@@ -103,53 +192,6 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
       factors.push({ label: "Matala laina/osake", impact: -1, reason: `${f.loan_per_share.toLocaleString("fi-FI")} €` });
       score -= 1;
     }
-  }
-
-  // ── Building age ─────────────────────────────────────────────────────
-  if (b.year !== null) {
-    const hasRecentMajorReno = r.last_major.some(
-      (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && reno.category === "major"
-    );
-
-    if (b.year < 1960 && !hasRecentMajorReno) {
-      factors.push({ label: "Hyvin vanha rakennus, ei peruskorjauksia", impact: 2, reason: `Rak. ${b.year}` });
-      score += 2;
-    } else if (b.year < 1990 && !hasRecentMajorReno) {
-      factors.push({ label: "Vanha rakennus, ei viimeaikaisia remontteja", impact: 1, reason: `Rak. ${b.year}` });
-      score += 1;
-    }
-
-    // ── Putkiremontti warning for pre-1990 buildings ──────────────────
-    const hasPipeReno = r.last_major.some((reno) => {
-      const t = reno.type.toLowerCase();
-      return t.includes("putki") || t.includes("linjasaneeraus");
-    });
-    const pipeUpcoming = r.upcoming.some((reno) => {
-      const t = reno.type.toLowerCase();
-      return t.includes("putki") || t.includes("linjasaneeraus");
-    });
-
-    if (b.year < 1990 && !hasPipeReno && !pipeUpcoming) {
-      factors.push({
-        label: "Putkiremontti todennäköinen lähivuosina",
-        impact: 1.5,
-        reason: `Rak. ${b.year}, ei merkintää putkiremontista`,
-      });
-      score += 1.5;
-    }
-  }
-
-  // ── Recent major renovation (positive) ───────────────────────────────
-  const recentMajor = r.last_major.filter(
-    (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && reno.category === "major"
-  );
-  if (recentMajor.length > 0) {
-    factors.push({
-      label: "Iso remontti tehty viime 10v",
-      impact: -1,
-      reason: recentMajor.map((x) => `${x.type} (${x.year})`).join(", "),
-    });
-    score -= 1;
   }
 
   // ── No repair fund data ───────────────────────────────────────────────
@@ -216,9 +258,9 @@ function generateRedFlags(data: HousingData, factors: ScoringFactor[]): string[]
 
   const { financials: f, building: b, repairs: r } = data;
 
-  // From scoring factors (already computed)
-  factors.filter((fac) => fac.impact > 0).forEach((fac) => {
-    flags.push(`${fac.label}: ${fac.reason}`);
+  // From scoring factors — include building flags (impact === 0) and risk factors (impact > 0)
+  factors.filter((fac) => fac.impact >= 0).forEach((fac) => {
+    flags.push(fac.impact === 0 ? fac.label : `${fac.label}: ${fac.reason}`);
   });
 
   // Extra flags not captured in scoring
