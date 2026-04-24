@@ -49,10 +49,11 @@ async function extractRaw(text: string) {
     PASS1_SYSTEM,
     `Extract these fields from the Finnish housing document below.
 Return ONLY JSON:
-- maintenance_fee_monthly (number|null)
-- financing_fee_monthly (number|null)
+- maintenance_fee_monthly (number|null) — TOTAL €/kk for this apartment. If document shows €/osake/kk, find the apartment share count (osakkeet) and multiply. If €/m²/kk, multiply by apartment_size_m2.
+- financing_fee_monthly (number|null) — same rule, total €/kk for this apartment
 - loan_per_share (number|null)
 - loan_per_m2 (number|null)
+- apartment_share_count (number|null) — number of shares (osakkeiden lukumäärä) owned by this apartment
 - building_year (number|null)
 - apartment_size_m2 (number|null)
 - housing_company_debt_total (number|null)

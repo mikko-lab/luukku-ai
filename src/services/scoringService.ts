@@ -144,16 +144,29 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
     const repairImpact = calculateRepairImpact(r.last_major);
     const netImpact = Math.round((building.risk + repairImpact) * 10) / 10;
 
-    if (netImpact !== 0) {
+    if (netImpact > 0) {
+      // Building is at risk — show what's missing
       factors.push({
-        label: netImpact > 0 ? "Rakennuksen ikä & puuttuvat remontit" : "Remontit tehty hyvin",
+        label: "Rakennuksen ikä & puuttuvat remontit",
         impact: netImpact,
-        reason: building.flags.length > 0 ? building.flags.join(", ") : `Rak. ${b.year}`,
+        reason: building.flags.join(", "),
+      });
+      score += netImpact;
+    } else if (netImpact < 0) {
+      // Repairs have been done well
+      const doneRenovations = r.last_major
+        .filter((reno) => reno.year !== null && reno.year >= 2000 && reno.category === "major")
+        .map((reno) => `${reno.type} (${reno.year})`)
+        .join(", ");
+      factors.push({
+        label: "Isot remontit tehty",
+        impact: netImpact,
+        reason: doneRenovations || `Rak. ${b.year}`,
       });
       score += netImpact;
     }
 
-    // Attach building flags to factors so generateRedFlags picks them up
+    // Building flags always visible in red_flags even when repairs offset them
     for (const flag of building.flags) {
       factors.push({ label: flag, impact: 0, reason: `Rak. ${b.year}` });
     }
