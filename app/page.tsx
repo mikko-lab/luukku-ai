@@ -26,10 +26,13 @@ function VerdictBadge({ verdict, score }: { verdict: AnalysisResult["verdict"]; 
     "HYVÄ KOHDE": "text-green-600 bg-green-50 border-green-200",
   };
   return (
-    <div className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${styles[verdict]}`}>
-      <span className="text-7xl font-black leading-none">{score}</span>
-      <span className="text-sm font-bold mt-2 tracking-wide">{verdict}</span>
-      <span className="text-xs opacity-60 mt-0.5">/ 10</span>
+    <div
+      className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${styles[verdict]}`}
+      aria-label={`Riskiarvio: ${verdict}, pisteet ${score} / 10`}
+    >
+      <span className="text-7xl font-black leading-none" aria-hidden="true">{score}</span>
+      <span className="text-sm font-bold mt-2 tracking-wide" aria-hidden="true">{verdict}</span>
+      <span className="text-xs opacity-60 mt-0.5" aria-hidden="true">/ 10</span>
     </div>
   );
 }
@@ -46,7 +49,8 @@ function RepairRow({ repair }: { repair: UpcomingRepair }) {
       <span className="font-medium text-gray-800">{repair.type}</span>
       <div className="flex items-center gap-2 shrink-0">
         {repair.planned_year && <span className="text-sm text-gray-500">{repair.planned_year}</span>}
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge}`}>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge}`}
+          aria-label={`Luotettavuus: ${CONFIDENCE_FI[repair.confidence] ?? repair.confidence}`}>
           {CONFIDENCE_FI[repair.confidence] ?? repair.confidence}
         </span>
       </div>
@@ -80,30 +84,39 @@ function FileZone({
     [onFile]
   );
 
+  const inputId = `file-input-${label.replace(/\s+/g, "-").toLowerCase()}`;
+
   return (
     <div
       onDrop={handleDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${label}${optional ? " (valinnainen)" : ""} — ${fileName ? `Valittu: ${fileName}` : hint}`}
       className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-colors
         ${dragOver ? "border-blue-400 bg-blue-50" : fileName ? "border-green-300 bg-green-50" : "border-gray-300 bg-white hover:border-gray-400"}`}
     >
       <input
         ref={inputRef}
+        id={inputId}
         type="file"
         accept="application/pdf"
         className="hidden"
+        aria-hidden="true"
+        tabIndex={-1}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
       />
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-1" aria-hidden="true">
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span>
         {optional && <span className="text-xs text-gray-400">(valinnainen)</span>}
       </div>
       {fileName ? (
-        <p className="text-sm font-medium text-green-700 text-center">{fileName}</p>
+        <p className="text-sm font-medium text-green-700 text-center" aria-hidden="true">{fileName}</p>
       ) : (
-        <p className="text-sm text-gray-500 text-center">{hint}</p>
+        <p className="text-sm text-gray-500 text-center" aria-hidden="true">{hint}</p>
       )}
     </div>
   );
@@ -124,6 +137,7 @@ export default function Home() {
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
   const outOfCredits = user !== null && user.credits_remaining <= 0;
   const canAnalyze = !!file1 && !outOfCredits;
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -177,6 +191,7 @@ export default function Home() {
       setResult(data);
       setState("done");
       setUser((u) => u ? { ...u, credits_remaining: u.credits_remaining - 1 } : u);
+      setTimeout(() => resultsRef.current?.focus(), 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tuntematon virhe");
       setState("error");
@@ -208,13 +223,16 @@ export default function Home() {
             </div>
             {user && (
               <div className="flex items-center gap-3">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  user.credits_remaining === 0
-                    ? "bg-red-50 text-red-600"
-                    : user.credits_remaining <= 5
-                    ? "bg-yellow-50 text-yellow-700"
-                    : "bg-gray-100 text-gray-600"
-                }`}>
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    user.credits_remaining === 0
+                      ? "bg-red-50 text-red-600"
+                      : user.credits_remaining <= 5
+                      ? "bg-yellow-50 text-yellow-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
                   {user.credits_remaining === 0
                     ? "Ei analyysejä jäljellä"
                     : user.credits_remaining <= 5
@@ -285,6 +303,7 @@ export default function Home() {
         <button
           onClick={analyze}
           disabled={!canAnalyze || state === "loading"}
+          aria-busy={state === "loading"}
           className="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm
             hover:bg-blue-700 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
@@ -295,10 +314,13 @@ export default function Home() {
 
         {/* Out of credits */}
         {outOfCredits && (
-          <div className="mt-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
+          <div role="alert" className="mt-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
             <p className="font-semibold mb-1">Analyysit käytetty</p>
             <p>Ota yhteyttä pyytääksesi lisää käyttöä.</p>
-            <a href="mailto:mikkotark@protonmail.com?subject=Luukku-AI lisää analyysejä" className="mt-2 inline-block text-xs font-semibold text-yellow-900 underline">
+            <a
+              href="mailto:mikkotark@protonmail.com?subject=Luukku-AI lisää analyysejä"
+              className="mt-2 inline-block text-xs font-semibold text-yellow-900 underline"
+            >
               Pyydä lisää käyttöä →
             </a>
           </div>
@@ -306,23 +328,23 @@ export default function Home() {
 
         {/* Error */}
         {error && (
-          <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+          <div role="alert" className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
             {error === "NO_CREDITS" ? "Analyysit käytetty — pyydä lisää käyttöä." : error}
           </div>
         )}
 
         {/* Loading skeleton */}
         {state === "loading" && (
-          <div className="mt-8 space-y-3 animate-pulse">
-            <div className="h-32 bg-gray-100 rounded-2xl" />
-            <div className="h-24 bg-gray-100 rounded-2xl" />
-            <div className="h-24 bg-gray-100 rounded-2xl" />
+          <div aria-live="polite" aria-label="Analysoidaan dokumenttia, odota hetki" className="mt-8 space-y-3 animate-pulse">
+            <div className="h-32 bg-gray-100 rounded-2xl" aria-hidden="true" />
+            <div className="h-24 bg-gray-100 rounded-2xl" aria-hidden="true" />
+            <div className="h-24 bg-gray-100 rounded-2xl" aria-hidden="true" />
           </div>
         )}
 
         {/* Results */}
         {state === "done" && result && (
-          <div className="mt-8 space-y-4">
+          <div ref={resultsRef} tabIndex={-1} className="mt-8 space-y-4 outline-none">
             {/* Verdict + cost */}
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-8">
               <VerdictBadge verdict={result.verdict} score={result.risk_score} />
@@ -370,7 +392,7 @@ export default function Home() {
                 <ul className="space-y-2">
                   {result.red_flags.map((flag, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="mt-0.5 text-red-500 shrink-0">⚠</span>
+                      <span className="mt-0.5 text-red-500 shrink-0" aria-hidden="true">⚠</span>
                       {flag}
                     </li>
                   ))}
@@ -415,6 +437,7 @@ export default function Home() {
               href="https://buy.stripe.com/PLACEHOLDER"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Osta analyysipaketti (avautuu uuteen välilehteen)"
               className="block w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm text-center hover:bg-blue-700 transition-colors"
             >
               Osta analyysipaketti →

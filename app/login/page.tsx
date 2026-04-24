@@ -39,6 +39,9 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const labelClass = "block text-xs font-medium text-gray-600 mb-1";
+
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -58,42 +61,55 @@ export default function LoginPage() {
             : "Aloita 20 ilmaisella analyysillä"}
         </p>
 
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={submit} className="space-y-4">
           {mode === "signup" && (
-            <input
-              type="text"
-              placeholder="Toimiston nimi"
-              value={officeName}
-              onChange={(e) => setOfficeName(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div>
+              <label htmlFor="office-name" className={labelClass}>Toimiston nimi</label>
+              <input
+                id="office-name"
+                type="text"
+                autoComplete="organization"
+                value={officeName}
+                onChange={(e) => setOfficeName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </div>
           )}
-          <input
-            type="email"
-            placeholder="Sähköposti"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="password"
-            placeholder="Salasana"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div>
+            <label htmlFor="email" className={labelClass}>Sähköposti</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className={labelClass}>Salasana</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              className={inputClass}
+            />
+          </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p role="alert" className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
+            aria-busy={loading}
             className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? "Hetki…" : mode === "login" ? "Kirjaudu" : "Luo tili"}
