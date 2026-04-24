@@ -73,6 +73,48 @@ ${text.slice(0, 10000)}`
     .filter(([, v]) => v !== null && !(Array.isArray(v) && v.length === 0))
     .map(([k]) => k);
   log(SERVICE, `Pass 1 fields found: [${fieldsFound.join(", ")}]`);
+  log(SERVICE, "Pass 1 raw financials", {
+    maintenance_fee_monthly: safe.maintenance_fee_monthly,
+    financing_fee_monthly: safe.financing_fee_monthly,
+    apartment_share_count: safe.apartment_share_count,
+    apartment_size_m2: safe.apartment_size_m2,
+    loan_per_share: safe.loan_per_share,
+    repair_fund: safe.repair_fund,
+  });
+
+  // Unit correction: if fee looks like a per-share or per-m² rate instead of total monthly cost,
+  // try to recover by multiplying. Finnish hoitovastike is never below ~50€/kk for any apartment.
+  const MIN_PLAUSIBLE_FEE = 50;
+  for (const field of ["maintenance_fee_monthly", "financing_fee_monthly"] as const) {
+    const fee = safe[field];
+    if (fee === null) continue;
+
+    if (fee >= MIN_PLAUSIBLE_FEE) continue; // looks fine
+
+    // Try: fee * share_count (per-share rate)
+    if (safe.apartment_share_count !== null && safe.apartment_share_count > 1) {
+      const corrected = fee * safe.apartment_share_count;
+      if (corrected >= MIN_PLAUSIBLE_FEE) {
+        logWarn(SERVICE, `${field}: ${fee} looks like per-share rate — correcting to ${corrected} (× ${safe.apartment_share_count} shares)`);
+        safe[field] = Math.round(corrected);
+        continue;
+      }
+    }
+
+    // Try: fee * size_m2 (per-m² rate)
+    if (safe.apartment_size_m2 !== null && safe.apartment_size_m2 > 0) {
+      const corrected = fee * safe.apartment_size_m2;
+      if (corrected >= MIN_PLAUSIBLE_FEE) {
+        logWarn(SERVICE, `${field}: ${fee} looks like per-m² rate — correcting to ${corrected} (× ${safe.apartment_size_m2} m²)`);
+        safe[field] = Math.round(corrected);
+        continue;
+      }
+    }
+
+    // Can't correct — null it so the default kicks in
+    logWarn(SERVICE, `${field}: ${fee} is implausibly low and uncorrectable — nulling`);
+    safe[field] = null;
+  }
 
   return safe;
 }
@@ -84,7 +126,8 @@ ${text.slice(0, 10000)}`
 const PASS2_SYSTEM = `You structure raw Finnish housing repair data into clean JSON.
 Return ONLY valid JSON, no markdown. Do not invent values.
 completed/done repairs → last_major_renovations, planned/future → upcoming_repairs.
-Major types: putkiremontti, linjasaneeraus, julkisivuremontti, kattoremontti, peruskorjaus.
+Major types: putkiremontti, linjasaneeraus, julkisivuremontti, kattoremontti, peruskorjaus, kylpyhuoneremontti, märkätilaremontti.
+Synonyms: märkätila=kylpyhuoneremontti, linjasaneeraus=putkiremontti (use the exact term from the document).
 Time: "tehty 2018"→year=2018, "2026-2028"→planned_year=2027 (midpoint), "tulevina vuosina"→null+confidence=low.`;
 
 async function structureRepairs(raw: { repairs_raw: string[] }) {

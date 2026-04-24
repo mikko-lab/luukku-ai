@@ -26,6 +26,7 @@ export interface RawExtractedFields {
   financing_fee_monthly: number | null;
   loan_per_share: number | null;
   loan_per_m2: number | null;
+  apartment_share_count: number | null;
   building_year: number | null;
   apartment_size_m2: number | null;
   housing_company_debt_total: number | null;
@@ -50,6 +51,7 @@ export function ensureSchema(data: unknown): RawExtractedFields {
     financing_fee_monthly: num(d?.financing_fee_monthly),
     loan_per_share: num(d?.loan_per_share),
     loan_per_m2: num(d?.loan_per_m2),
+    apartment_share_count: num(d?.apartment_share_count),
     building_year: num(d?.building_year),
     apartment_size_m2: num(d?.apartment_size_m2),
     housing_company_debt_total: num(d?.housing_company_debt_total),

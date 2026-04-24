@@ -20,19 +20,20 @@ const CONFIDENCE_FI: Record<string, string> = {
 };
 
 function VerdictBadge({ verdict, score }: { verdict: AnalysisResult["verdict"]; score: number }) {
-  const styles: Record<AnalysisResult["verdict"], string> = {
-    "ÄLÄ OSTA": "text-red-600 bg-red-50 border-red-200",
-    "HARKITSE TARKKAAN": "text-yellow-600 bg-yellow-50 border-yellow-200",
-    "HYVÄ KOHDE": "text-green-600 bg-green-50 border-green-200",
+  const styles: Record<AnalysisResult["verdict"], { bg: string; text: string }> = {
+    "ÄLÄ OSTA":        { bg: "bg-red-50",    text: "text-red-600" },
+    "HARKITSE TARKKAAN": { bg: "bg-yellow-50", text: "text-yellow-600" },
+    "HYVÄ KOHDE":      { bg: "bg-green-50",  text: "text-green-600" },
   };
+  const { bg, text } = styles[verdict];
   return (
     <div
-      className={`inline-flex flex-col items-center border-2 rounded-2xl px-8 py-5 ${styles[verdict]}`}
+      className={`inline-flex flex-col items-center rounded-2xl px-7 py-5 ${bg}`}
       aria-label={`Riskiarvio: ${verdict}, pisteet ${score} / 10`}
     >
-      <span className="text-7xl font-black leading-none" aria-hidden="true">{score}</span>
-      <span className="text-sm font-bold mt-2 tracking-wide" aria-hidden="true">{verdict}</span>
-      <span className="text-xs opacity-60 mt-0.5" aria-hidden="true">/ 10</span>
+      <span className={`text-7xl font-black leading-none ${text}`} aria-hidden="true">{score}</span>
+      <span className={`text-xs font-semibold mt-2 tracking-widest uppercase ${text} opacity-80`} aria-hidden="true">{verdict}</span>
+      <span className="text-xs text-gray-400 mt-0.5" aria-hidden="true">/ 10</span>
     </div>
   );
 }
@@ -97,7 +98,7 @@ function FileZone({
       tabIndex={0}
       aria-label={`${label}${optional ? " (valinnainen)" : ""} — ${fileName ? `Valittu: ${fileName}` : hint}`}
       className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-colors
-        ${dragOver ? "border-blue-400 bg-blue-50" : fileName ? "border-green-300 bg-green-50" : "border-gray-300 bg-white hover:border-gray-400"}`}
+        ${dragOver ? "border-apple-blue bg-blue-50" : fileName ? "border-gray-200 bg-white" : "border-gray-200 bg-white hover:border-gray-300"}`}
     >
       <input
         ref={inputRef}
@@ -114,7 +115,7 @@ function FileZone({
         {optional && <span className="text-xs text-gray-500">(valinnainen)</span>}
       </div>
       {fileName ? (
-        <p className="text-sm font-medium text-green-700 text-center" aria-hidden="true">{fileName}</p>
+        <p className="text-sm font-medium text-green-600 text-center" aria-hidden="true">✓ {fileName}</p>
       ) : (
         <p className="text-sm text-gray-500 text-center" aria-hidden="true">{hint}</p>
       )}
@@ -217,10 +218,7 @@ export default function Home() {
         {/* Header */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo-mark.svg" alt="" width="32" height="32" />
-              <span className="text-lg font-black tracking-tight text-gray-900">Luukku<span className="text-blue-600">-AI</span></span>
-            </div>
+            <span className="text-lg font-black tracking-tight text-gray-900">Luukku<span className="text-apple-blue">-AI</span></span>
             {user && (
               <div className="flex items-center gap-3">
                 <span
@@ -304,8 +302,8 @@ export default function Home() {
           onClick={analyze}
           disabled={!canAnalyze || state === "loading"}
           aria-busy={state === "loading"}
-          className="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm
-            hover:bg-blue-700 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="mt-4 w-full py-3 rounded-xl bg-apple-blue text-white font-semibold text-sm
+            hover:bg-apple-blueh active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           {state === "loading"
             ? file2 ? "Analysoidaan kahta dokumenttia…" : "Analysoidaan…"
@@ -314,7 +312,7 @@ export default function Home() {
 
         {/* Out of credits */}
         {outOfCredits && (
-          <div role="alert" className="mt-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
+          <div role="alert" className="mt-4 p-5 rounded-2xl bg-yellow-50 text-sm text-yellow-800">
             <p className="font-semibold mb-1">Analyysit käytetty</p>
             <p>Ota yhteyttä pyytääksesi lisää käyttöä.</p>
             <a
@@ -328,7 +326,7 @@ export default function Home() {
 
         {/* Error */}
         {error && (
-          <div role="alert" className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+          <div role="alert" className="mt-4 p-5 rounded-2xl bg-red-50 text-sm text-red-700">
             {error === "NO_CREDITS" ? "Analyysit käytetty — pyydä lisää käyttöä." : error}
           </div>
         )}
@@ -346,7 +344,7 @@ export default function Home() {
         {state === "done" && result && (
           <div ref={resultsRef} tabIndex={-1} className="mt-8 space-y-4 outline-none">
             {/* Verdict + cost */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-8">
+            <div className="bg-white rounded-2xl shadow-card p-7 flex items-center gap-8">
               <VerdictBadge verdict={result.verdict} score={result.risk_score} />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -373,7 +371,7 @@ export default function Home() {
 
             {/* Upcoming repairs */}
             {knownRepairs.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-6">
+              <div className="bg-white rounded-2xl shadow-card p-7">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
                   Tulevat remontit
                 </h2>
@@ -385,14 +383,14 @@ export default function Home() {
 
             {/* Red flags */}
             {result.red_flags.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-6">
+              <div className="bg-white rounded-2xl shadow-card p-7">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
                   Huomiot
                 </h2>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {result.red_flags.map((flag, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="mt-0.5 text-red-500 shrink-0" aria-hidden="true">⚠</span>
+                    <li key={i} className="flex items-start gap-3 text-sm text-gray-700 leading-relaxed">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" aria-hidden="true" />
                       {flag}
                     </li>
                   ))}
@@ -401,7 +399,7 @@ export default function Home() {
             )}
 
             {/* Raw numbers */}
-            <details className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <details className="bg-white rounded-2xl shadow-card overflow-hidden">
               <summary className="px-6 py-4 text-sm font-semibold uppercase tracking-wide text-gray-500 cursor-pointer select-none">
                 Raakadata
               </summary>
@@ -428,15 +426,14 @@ export default function Home() {
 
             <button
               onClick={downloadReport}
-              className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition-colors"
+              className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-black transition-colors"
             >
               Lataa asiantuntijaraportti (PDF)
             </button>
 
-
             <button
               onClick={reset}
-              className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+              className="w-full py-2.5 rounded-xl text-sm text-apple-gray hover:text-gray-900 transition-colors"
             >
               Analysoi uusi tiedosto
             </button>

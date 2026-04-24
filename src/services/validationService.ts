@@ -4,7 +4,7 @@ import { log, logWarn } from "@/src/utils/logger";
 const SERVICE = "validationService";
 
 const BOUNDS = {
-  maintenance_fee_monthly: { min: 0, max: 5000 },
+  maintenance_fee_monthly: { min: 30, max: 5000 },
   financing_fee_monthly: { min: 0, max: 5000 },
   loan_per_share: { min: 0, max: 100_000 },
   loan_per_m2: { min: 0, max: 5000 },

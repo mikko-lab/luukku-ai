@@ -8,6 +8,7 @@ export type RepairCategory = "major" | "minor" | "unknown";
 const MAJOR_KEYWORDS = [
   "putkiremontti", "linjasaneeraus", "julkisivu", "julkisivuremontti",
   "kattoremontti", "peruskorjaus", "katto",
+  "kylpyhuoneremontti", "kylpyhuone", "märkätilaremontti", "märkätila",
 ];
 
 const MINOR_KEYWORDS = [
@@ -17,19 +18,23 @@ const MINOR_KEYWORDS = [
 ];
 
 export const REPAIR_WEIGHTS: Record<string, number> = {
-  putkiremontti:    3.0,
-  linjasaneeraus:   3.0,
-  julkisivu:        2.0,
-  julkisivuremontti: 2.0,
-  kattoremontti:    2.0,
-  katto:            2.0,
-  peruskorjaus:     2.5,
-  lämpöpumppu:      0.5,
-  vesikouru:        0.2,
-  maalaus:          0.2,
-  ikkuna:           0.5,
-  ilmanvaihto:      0.4,
-  salaoja:          0.8,
+  putkiremontti:      3.0,
+  linjasaneeraus:     3.0,
+  julkisivu:          2.0,
+  julkisivuremontti:  2.0,
+  kattoremontti:      2.0,
+  katto:              2.0,
+  peruskorjaus:       2.5,
+  kylpyhuoneremontti: 1.5,
+  kylpyhuone:         1.5,
+  märkätilaremontti:  1.5,
+  märkätila:          1.5,
+  lämpöpumppu:        0.5,
+  vesikouru:          0.2,
+  maalaus:            0.2,
+  ikkuna:             0.5,
+  ilmanvaihto:        0.4,
+  salaoja:            0.8,
 };
 
 function category(type: string): RepairCategory {

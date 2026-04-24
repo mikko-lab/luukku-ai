@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   flagBullet: {
-    color: "#EF4444",
+    color: "#6B7280",
     width: 10,
   },
   flagText: {
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
 });
 
 function verdictColors(verdict: AnalysisResult["verdict"]) {
-  if (verdict === "ÄLÄ OSTA") return { bg: "#FEF2F2", text: "#DC2626" };
-  if (verdict === "HARKITSE TARKKAAN") return { bg: "#FEFCE8", text: "#CA8A04" };
-  return { bg: "#F0FDF4", text: "#16A34A" };
+  if (verdict === "ÄLÄ OSTA") return { bg: "#FEF2F2", text: "#991B1B" };       // red-800 on red-50: 5.9:1
+  if (verdict === "HARKITSE TARKKAAN") return { bg: "#FFFBEB", text: "#92400E" }; // amber-800 on amber-50: 5.7:1
+  return { bg: "#F0FDF4", text: "#166534" };                                     // green-800 on green-50: 5.2:1
 }
 
 interface Props {
@@ -251,7 +251,7 @@ export function ReportPDF({ result, address, brokerLogo }: Props) {
             <Text style={styles.sectionTitle}>Huomiot</Text>
             {result.red_flags.map((flag, i) => (
               <View key={i} style={styles.flagRow}>
-                <Text style={styles.flagBullet}>▲</Text>
+                <Text style={styles.flagBullet}>-</Text>
                 <Text style={styles.flagText}>{flag}</Text>
               </View>
             ))}
