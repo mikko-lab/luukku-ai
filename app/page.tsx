@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { AnalysisResult, UpcomingRepair } from "@/types/analysis";
 
 type AppState = "idle" | "loading" | "done" | "error";
+
+type UserInfo = {
+  id: string;
+  email: string;
+  office_name: string;
+  credits_remaining: number;
+};
 
 const CONFIDENCE_FI: Record<string, string> = {
   high: "varma",
@@ -102,9 +110,11 @@ function FileZone({
 }
 
 export default function Home() {
+  const router = useRouter();
   const [state, setState] = useState<AppState>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
 
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
@@ -112,7 +122,18 @@ export default function Home() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
-  const canAnalyze = !!file1;
+  const outOfCredits = user !== null && user.credits_remaining <= 0;
+  const canAnalyze = !!file1 && !outOfCredits;
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || data.error) { router.push("/login"); return; }
+        setUser(data);
+      })
+      .catch(() => router.push("/login"));
+  }, [router]);
 
   function handleLogoUpload(file: File) {
     const reader = new FileReader();
@@ -155,6 +176,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error ?? "Analyysi epäonnistui");
       setResult(data);
       setState("done");
+      setUser((u) => u ? { ...u, credits_remaining: u.credits_remaining - 1 } : u);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tuntematon virhe");
       setState("error");
@@ -179,9 +201,34 @@ export default function Home() {
       <div className="w-full max-w-xl">
         {/* Header */}
         <div className="mb-10">
-          <div className="flex items-center gap-2.5 mb-6">
-            <img src="/logo-mark.svg" alt="" width="32" height="32" />
-            <span className="text-lg font-black tracking-tight text-gray-900">Luukku<span className="text-blue-600">-AI</span></span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2.5">
+              <img src="/logo-mark.svg" alt="" width="32" height="32" />
+              <span className="text-lg font-black tracking-tight text-gray-900">Luukku<span className="text-blue-600">-AI</span></span>
+            </div>
+            {user && (
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  user.credits_remaining === 0
+                    ? "bg-red-50 text-red-600"
+                    : user.credits_remaining <= 5
+                    ? "bg-yellow-50 text-yellow-700"
+                    : "bg-gray-100 text-gray-600"
+                }`}>
+                  {user.credits_remaining === 0
+                    ? "Ei analyysejä jäljellä"
+                    : user.credits_remaining <= 5
+                    ? `Vain ${user.credits_remaining} analyysiä jäljellä`
+                    : `${user.credits_remaining} / 20 analyysiä jäljellä`}
+                </span>
+                <button
+                  onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); }}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Kirjaudu ulos
+                </button>
+              </div>
+            )}
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Asuntoanalyysi</h1>
           <p className="text-gray-500 mt-1">
@@ -246,10 +293,21 @@ export default function Home() {
             : "Analysoi"}
         </button>
 
+        {/* Out of credits */}
+        {outOfCredits && (
+          <div className="mt-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
+            <p className="font-semibold mb-1">Analyysit käytetty</p>
+            <p>Ota yhteyttä pyytääksesi lisää käyttöä.</p>
+            <a href="mailto:mikkotark@protonmail.com?subject=Luukku-AI lisää analyysejä" className="mt-2 inline-block text-xs font-semibold text-yellow-900 underline">
+              Pyydä lisää käyttöä →
+            </a>
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
-            {error}
+            {error === "NO_CREDITS" ? "Analyysit käytetty — pyydä lisää käyttöä." : error}
           </div>
         )}
 

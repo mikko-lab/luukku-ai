@@ -5,7 +5,11 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { result, address } = await req.json() as { result: AnalysisResult; address: string };
+    const { result, address, brokerLogo } = await req.json() as {
+      result: AnalysisResult;
+      address: string;
+      brokerLogo?: string;
+    };
 
     // Dynamic import avoids SSR issues
     const { renderToBuffer } = await import("@react-pdf/renderer");
@@ -13,7 +17,7 @@ export async function POST(req: NextRequest) {
     const { ReportPDF } = await import("@/src/components/ReportPDF");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const element = createElement(ReportPDF as any, { result, address });
+    const element = createElement(ReportPDF as any, { result, address, brokerLogo });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
 

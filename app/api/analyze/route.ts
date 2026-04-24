@@ -11,6 +11,8 @@ import { classifyRepairs } from "@/src/services/repairClassificationService";
 import { mergeHousingData } from "@/src/services/mergeService";
 import { withTimeout } from "@/src/utils/withTimeout";
 import { log, logError } from "@/src/utils/logger";
+import { getSession } from "@/src/lib/auth";
+import { db } from "@/src/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,6 +24,19 @@ export async function POST(req: NextRequest) {
   log(SERVICE, `=== New analysis request [${requestId}] ===`);
 
   try {
+    // 0. Auth + credit check (race-condition safe)
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    await db.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: session.userId } });
+      if (!user || user.credits_remaining <= 0) {
+        throw new Error("NO_CREDITS");
+      }
+    });
+
     // 1. File validation
     const formData = await req.formData();
     const file = formData.get("file");
@@ -89,7 +104,24 @@ export async function POST(req: NextRequest) {
 
     log(SERVICE, `=== Request [${requestId}] complete — risk: ${analysis.risk_score}/10, confidence: ${confidence.percent}% ===`);
 
-    // 9. Return API response
+    // 9. Decrement credit + log (only on success)
+    await db.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: session.userId } });
+      if (!user || user.credits_remaining <= 0) throw new Error("NO_CREDITS");
+      await tx.user.update({
+        where: { id: session.userId },
+        data: { credits_remaining: { decrement: 1 } },
+      });
+      await tx.analysisLog.create({
+        data: {
+          user_id: session.userId,
+          risk_score: analysis.risk_score,
+          request_id: requestId,
+        },
+      });
+    });
+
+    // 10. Return API response
     return NextResponse.json({
       verdict: analysis.verdict,
       risk_score: analysis.risk_score,
@@ -119,6 +151,9 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logError(SERVICE, `Request [${requestId}] failed`, err);
     const message = err instanceof Error ? err.message : "Analysis failed";
+    if (message === "NO_CREDITS") {
+      return NextResponse.json({ error: "NO_CREDITS" }, { status: 402 });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

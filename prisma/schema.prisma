@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                String        @id @default(cuid())
+  email             String        @unique
+  password_hash     String
+  office_name       String
+  credits_remaining Int           @default(20)
+  created_at        DateTime      @default(now())
+  analyses          AnalysisLog[]
+}
+
+model AnalysisLog {
+  id         String   @id @default(cuid())
+  user_id    String
+  created_at DateTime @default(now())
+  address    String?
+  risk_score Float?
+  request_id String?  @unique
+
+  user User @relation(fields: [user_id], references: [id])
+}
