@@ -142,7 +142,8 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
   if (b.year !== null) {
     const building = buildingRiskModel(b.year, r);
     const repairImpact = calculateRepairImpact(r.last_major);
-    const netImpact = Math.round((building.risk + repairImpact) * 10) / 10;
+    // Repairs can cancel building risk but max bonus is -1 (prevents score collapsing with many past repairs)
+    const netImpact = Math.round(Math.max(-1, building.risk + repairImpact) * 10) / 10;
 
     if (netImpact > 0) {
       // Building is at risk — show what's missing
