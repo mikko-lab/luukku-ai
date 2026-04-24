@@ -110,8 +110,8 @@ function FileZone({
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
       />
       <div className="flex items-center gap-2 mb-1" aria-hidden="true">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span>
-        {optional && <span className="text-xs text-gray-400">(valinnainen)</span>}
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
+        {optional && <span className="text-xs text-gray-500">(valinnainen)</span>}
       </div>
       {fileName ? (
         <p className="text-sm font-medium text-green-700 text-center" aria-hidden="true">{fileName}</p>
@@ -241,7 +241,7 @@ export default function Home() {
                 </span>
                 <button
                   onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-gray-500 hover:text-gray-600"
                 >
                   Kirjaudu ulos
                 </button>
@@ -287,12 +287,12 @@ export default function Home() {
           {brokerLogo ? (
             <div className="flex items-center gap-2">
               <img src={brokerLogo} alt="Logo" className="h-6 object-contain" />
-              <button onClick={removeLogo} className="text-xs text-gray-400 hover:text-gray-600">Poista</button>
+              <button onClick={removeLogo} className="text-xs text-gray-500 hover:text-gray-600">Poista</button>
             </div>
           ) : (
             <button
               onClick={() => logoInputRef.current?.click()}
-              className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+              className="text-xs text-gray-500 hover:text-gray-600 underline underline-offset-2"
             >
               + Lisää välittäjän logo PDF-raporttiin
             </button>
@@ -349,21 +349,21 @@ export default function Home() {
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-8">
               <VerdictBadge verdict={result.verdict} score={result.risk_score} />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Arvioitu todellinen kuukausikulu
                 </p>
                 <p className="text-4xl font-black text-gray-900 mt-1">
                   {result.monthly_cost.toLocaleString("fi-FI")} €
-                  <span className="text-base font-normal text-gray-400">/kk</span>
+                  <span className="text-base font-normal text-gray-500">/kk</span>
                 </p>
                 {result.extracted.apartment_size_m2 && (
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Asunto {result.extracted.apartment_size_m2} m²
                     {result.extracted.building_year && ` · Rak. ${result.extracted.building_year}`}
                   </p>
                 )}
                 {result.extracted.confidence_percent && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Analyysin luotettavuus {result.extracted.confidence_percent}%
                     {file2 ? " · 2 dokumenttia" : ""}
                   </p>
@@ -374,7 +374,7 @@ export default function Home() {
             {/* Upcoming repairs */}
             {knownRepairs.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
                   Tulevat remontit
                 </h2>
                 <ul>
@@ -386,7 +386,7 @@ export default function Home() {
             {/* Red flags */}
             {result.red_flags.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
                   Huomiot
                 </h2>
                 <ul className="space-y-2">
@@ -402,7 +402,7 @@ export default function Home() {
 
             {/* Raw numbers */}
             <details className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-              <summary className="px-6 py-4 text-sm font-semibold uppercase tracking-wide text-gray-400 cursor-pointer select-none">
+              <summary className="px-6 py-4 text-sm font-semibold uppercase tracking-wide text-gray-500 cursor-pointer select-none">
                 Raakadata
               </summary>
               <div className="px-6 pb-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -416,7 +416,7 @@ export default function Home() {
                 ].map(([label, val, unit]) =>
                   val !== null && val !== undefined ? (
                     <div key={label as string} className="py-1 border-b border-gray-100">
-                      <span className="text-gray-400">{label}</span>
+                      <span className="text-gray-500">{label}</span>
                       <span className="ml-2 font-semibold text-gray-800">
                         {(val as number).toLocaleString("fi-FI")} {unit}
                       </span>
