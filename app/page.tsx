@@ -108,9 +108,17 @@ export default function Home() {
 
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
+  const [brokerLogo, setBrokerLogo] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
   const canAnalyze = !!file1;
+
+  function handleLogoUpload(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => setBrokerLogo(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
 
   async function downloadReport() {
     if (!result) return;
@@ -120,7 +128,7 @@ export default function Home() {
     const res = await fetch("/api/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ result, address }),
+      body: JSON.stringify({ result, address, brokerLogo }),
     });
     if (!res.ok) return;
     const blob = await res.blob();
@@ -161,6 +169,11 @@ export default function Home() {
     setError(null);
   }
 
+  function removeLogo() {
+    setBrokerLogo(null);
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-16">
       <div className="w-full max-w-xl">
@@ -196,6 +209,30 @@ export default function Home() {
         {file2 && !file1 && (
           <p className="mt-2 text-xs text-amber-600">Lisää myös isännöitsijäntodistus parempaa analyysiä varten.</p>
         )}
+
+        {/* Broker logo */}
+        <div className="mt-3 flex items-center gap-3">
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }}
+          />
+          {brokerLogo ? (
+            <div className="flex items-center gap-2">
+              <img src={brokerLogo} alt="Logo" className="h-6 object-contain" />
+              <button onClick={removeLogo} className="text-xs text-gray-400 hover:text-gray-600">Poista</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+            >
+              + Lisää välittäjän logo PDF-raporttiin
+            </button>
+          )}
+        </div>
 
         {/* Analyze button */}
         <button
@@ -315,6 +352,15 @@ export default function Home() {
             >
               Lataa asiantuntijaraportti (PDF)
             </button>
+
+            <a
+              href="https://buy.stripe.com/PLACEHOLDER"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm text-center hover:bg-blue-700 transition-colors"
+            >
+              Osta analyysipaketti →
+            </a>
 
             <button
               onClick={reset}
