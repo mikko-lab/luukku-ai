@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-parse", "@react-pdf/renderer"],
+  serverExternalPackages: ["pdf-parse", "@react-pdf/renderer", "@prisma/client", "bcryptjs"],
 };
 
 export default nextConfig;

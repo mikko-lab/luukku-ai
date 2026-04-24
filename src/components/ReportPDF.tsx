@@ -157,6 +157,7 @@ export function ReportPDF({ result, address, brokerLogo }: Props) {
   const e = result.extracted;
   const today = new Date().toLocaleDateString("fi-FI");
   const knownUpcoming = result.upcoming_repairs.filter((r) => r.type !== "other");
+  const knownRenovations = e.last_major_renovations.filter((r) => r.type !== "other");
 
   return (
     <Document
@@ -216,10 +217,10 @@ export function ReportPDF({ result, address, brokerLogo }: Props) {
 
           {/* Remontit */}
           <View style={[styles.section, styles.column]}>
-            {e.last_major_renovations.length > 0 && (
+            {knownRenovations.length > 0 && (
               <>
                 <Text style={styles.sectionTitle}>Tehdyt remontit</Text>
-                {e.last_major_renovations.map((r, i) => (
+                {knownRenovations.map((r, i) => (
                   <View key={i} style={styles.repairRow}>
                     <Text style={styles.repairType}>{r.type}</Text>
                     <Text style={styles.repairYear}>{r.year ?? "—"}</Text>
@@ -229,7 +230,7 @@ export function ReportPDF({ result, address, brokerLogo }: Props) {
             )}
 
             {knownUpcoming.length > 0 && (
-              <View style={{ marginTop: e.last_major_renovations.length > 0 ? 12 : 0 }}>
+              <View style={{ marginTop: knownRenovations.length > 0 ? 12 : 0 }}>
                 <Text style={styles.sectionTitle}>Tulevat remontit</Text>
                 {knownUpcoming.map((r, i) => (
                   <View key={i} style={styles.repairRow}>
