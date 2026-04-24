@@ -233,9 +233,10 @@ function computeMonthlyCost(data: HousingData): number {
     (f.financing_fee_monthly ?? 0);
 
   // Only amortize major and unknown upcoming repairs — minor repairs are noise
+  // repairWeight is for risk scoring only, not cost multiplication
   const repairMonthly = data.repairs.upcoming
     .filter((r) => r.category !== "minor" && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + 10))
-    .reduce((sum, r) => sum + estimateRepairCost(r.type, size) * repairWeight(r.type) / 60, 0);
+    .reduce((sum, r) => sum + estimateRepairCost(r.type, size) / 60, 0);
 
   return Math.round(base + repairMonthly);
 }
