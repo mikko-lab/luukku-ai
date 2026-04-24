@@ -146,6 +146,10 @@ export default function Home() {
       <div className="w-full max-w-xl">
         {/* Header */}
         <div className="mb-10">
+          <div className="flex items-center gap-2.5 mb-6">
+            <img src="/logo-mark.svg" alt="" width="32" height="32" />
+            <span className="text-lg font-black tracking-tight text-gray-900">Luukku<span className="text-blue-600">-AI</span></span>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">Asuntoanalyysi</h1>
           <p className="text-gray-500 mt-1">
             Lataa isännöitsijäntodistus ja/tai tilinpäätös — saat riskianalyysin muutamassa sekunnissa.
