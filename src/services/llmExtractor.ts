@@ -35,7 +35,11 @@ Return ONLY valid JSON, no markdown, no explanation.
 Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike=financing_fee_monthly,
 Yhtiölaina/osuus=loan_per_share, Velka/m2=loan_per_m2, Rakennusvuosi=building_year,
 Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
-Use null for missing values. Numbers only (no strings like "200 €").`;
+Use null for missing values. Numbers only (no strings like "200 €").
+CRITICAL: maintenance_fee_monthly and financing_fee_monthly must be the TOTAL monthly fee for this apartment in euros.
+If the document lists fees per share (€/osake/kk), multiply by the apartment's share count to get the total.
+If the document lists fees per m² (€/m²/kk), multiply by apartment_size_m2 to get the total.
+Never return per-share or per-m² rates as the fee — always return the apartment's total monthly cost.`;
 
 async function extractRaw(text: string) {
   log(SERVICE, "Pass 1: raw extraction...");
