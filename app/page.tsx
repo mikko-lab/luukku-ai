@@ -433,15 +433,6 @@ export default function Home() {
               Lataa asiantuntijaraportti (PDF)
             </button>
 
-            <a
-              href="https://buy.stripe.com/PLACEHOLDER"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Osta analyysipaketti (avautuu uuteen välilehteen)"
-              className="block w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm text-center hover:bg-blue-700 transition-colors"
-            >
-              Osta analyysipaketti →
-            </a>
 
             <button
               onClick={reset}
