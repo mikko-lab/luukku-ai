@@ -112,6 +112,26 @@ export default function Home() {
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
   const canAnalyze = !!file1;
 
+  async function downloadReport() {
+    if (!result) return;
+    const address = result.extracted.apartment_size_m2
+      ? `${result.extracted.building_year ?? ""} · ${result.extracted.apartment_size_m2} m²`
+      : "Kohde";
+    const res = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ result, address }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `luukku-analyysi.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function analyze() {
     if (!file1) return;
     setState("loading");
@@ -288,6 +308,13 @@ export default function Home() {
                 )}
               </div>
             </details>
+
+            <button
+              onClick={downloadReport}
+              className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition-colors"
+            >
+              Lataa asiantuntijaraportti (PDF)
+            </button>
 
             <button
               onClick={reset}
