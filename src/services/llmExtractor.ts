@@ -1,0 +1,153 @@
+import Anthropic from "@anthropic-ai/sdk";
+import type { HousingData } from "@/src/models/housingModel";
+import { safeParse, ensureSchema, ensureRepairsSchema } from "@/src/utils/parseGuard";
+import { log, logWarn, logTiming } from "@/src/utils/logger";
+
+const SERVICE = "llmExtractor";
+const MODEL = "claude-haiku-4-5";
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+
+/* ------------------------------------------------------------------ */
+/*  Core Claude call — never throws on bad JSON                         */
+/* ------------------------------------------------------------------ */
+
+async function callClaude(system: string, prompt: string): Promise<unknown> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = response.content[0];
+  if (block.type !== "text") throw new Error("Claude returned non-text block");
+
+  return safeParse(block.text);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pass 1 — raw field extraction                                       */
+/* ------------------------------------------------------------------ */
+
+const PASS1_SYSTEM = `You extract real estate data from Finnish housing documents.
+Return ONLY valid JSON, no markdown, no explanation.
+Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike=financing_fee_monthly,
+Yhtiölaina/osuus=loan_per_share, Velka/m2=loan_per_m2, Rakennusvuosi=building_year,
+Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
+Use null for missing values. Numbers only (no strings like "200 €").`;
+
+async function extractRaw(text: string) {
+  log(SERVICE, "Pass 1: raw extraction...");
+  const t = Date.now();
+
+  const raw = await callClaude(
+    PASS1_SYSTEM,
+    `Extract these fields from the Finnish housing document below.
+Return ONLY JSON:
+- maintenance_fee_monthly (number|null)
+- financing_fee_monthly (number|null)
+- loan_per_share (number|null)
+- loan_per_m2 (number|null)
+- building_year (number|null)
+- apartment_size_m2 (number|null)
+- housing_company_debt_total (number|null)
+- repair_fund (number|null)
+- city (string|null)
+- address (string|null)
+- repairs_raw (string[] — every sentence mentioning renovations or repairs)
+
+Document:
+${text.slice(0, 10000)}`
+  );
+
+  const safe = ensureSchema(raw);
+  logTiming(SERVICE, "Pass 1", t);
+
+  const fieldsFound = Object.entries(safe)
+    .filter(([, v]) => v !== null && !(Array.isArray(v) && v.length === 0))
+    .map(([k]) => k);
+  log(SERVICE, `Pass 1 fields found: [${fieldsFound.join(", ")}]`);
+
+  return safe;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pass 2 — structure repairs                                          */
+/* ------------------------------------------------------------------ */
+
+const PASS2_SYSTEM = `You structure raw Finnish housing repair data into clean JSON.
+Return ONLY valid JSON, no markdown. Do not invent values.
+completed/done repairs → last_major_renovations, planned/future → upcoming_repairs.
+Major types: putkiremontti, linjasaneeraus, julkisivuremontti, kattoremontti, peruskorjaus.
+Time: "tehty 2018"→year=2018, "2026-2028"→planned_year=2027 (midpoint), "tulevina vuosina"→null+confidence=low.`;
+
+async function structureRepairs(raw: { repairs_raw: string[] }) {
+  log(SERVICE, "Pass 2: structuring repairs...");
+  const t = Date.now();
+
+  if (raw.repairs_raw.length === 0) {
+    logWarn(SERVICE, "Pass 1 found no repair sentences — skipping Pass 2");
+    return ensureRepairsSchema(null);
+  }
+
+  const result = await callClaude(
+    PASS2_SYSTEM,
+    `Structure these repair mentions into clean JSON.
+
+Return ONLY:
+{
+  "last_major_renovations": [{ "type": string, "year": number|null }],
+  "upcoming_repairs": [{ "type": string, "planned_year": number|null, "confidence": "high"|"medium"|"low" }]
+}
+
+Repair sentences:
+${JSON.stringify(raw.repairs_raw)}`
+  );
+
+  const safe = ensureRepairsSchema(result);
+  logTiming(SERVICE, "Pass 2", t);
+  log(SERVICE, `Pass 2: ${safe.last_major_renovations.length} done, ${safe.upcoming_repairs.length} upcoming`);
+
+  return safe;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main export                                                          */
+/* ------------------------------------------------------------------ */
+
+export async function extractHousingData(text: string): Promise<HousingData> {
+  log(SERVICE, `Starting 2-pass extraction (${text.length} chars)`);
+
+  const raw = await extractRaw(text);
+  const repairs = await structureRepairs(raw);
+
+  return {
+    location: {
+      city: raw.city,
+      address: raw.address,
+      coordinates: null,
+      area_type: null,
+    },
+    financials: {
+      maintenance_fee_monthly: raw.maintenance_fee_monthly,
+      financing_fee_monthly: raw.financing_fee_monthly,
+      loan_per_share: raw.loan_per_share,
+      loan_per_m2: raw.loan_per_m2,
+      housing_company_debt_total: raw.housing_company_debt_total,
+      repair_fund: raw.repair_fund,
+    },
+    building: {
+      year: raw.building_year,
+      size_m2: raw.apartment_size_m2,
+    },
+    repairs: {
+      last_major: repairs.last_major_renovations,
+      upcoming: repairs.upcoming_repairs,
+    },
+    market: {
+      avg_price_m2: null,
+      deviation_percent: null,
+    },
+  };
+}
