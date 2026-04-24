@@ -24,12 +24,14 @@ export interface BuildingData {
 export interface Renovation {
   type: string;
   year: number | null;
+  category?: "major" | "minor" | "unknown";
 }
 
 export interface UpcomingRepair {
   type: string;
   planned_year: number | null;
   confidence: "high" | "medium" | "low";
+  category?: "major" | "minor" | "unknown";
 }
 
 export interface RepairData {

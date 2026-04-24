@@ -7,6 +7,7 @@ import { getLocationData } from "@/src/services/mmlService";
 import { getAreaPricing } from "@/src/services/statsService";
 import { computeAnalysis } from "@/src/services/scoringService";
 import { computeConfidence } from "@/src/services/confidenceService";
+import { classifyRepairs } from "@/src/services/repairClassificationService";
 import { withTimeout } from "@/src/utils/withTimeout";
 import { log, logError } from "@/src/utils/logger";
 
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
 
     // 5. Validate
     data = validateHousingData(data);
+
+    // 5b. Classify repairs (major / minor / unknown)
+    data = classifyRepairs(data);
 
     // 6. Enrich: location + market (run in parallel, timeout-guarded)
     log(SERVICE, "Enriching with external data...");

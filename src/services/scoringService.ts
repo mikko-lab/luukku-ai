@@ -4,6 +4,7 @@ import type {
   ScoringFactor,
   UpcomingRepair,
 } from "@/src/models/housingModel";
+import { repairWeight } from "@/src/services/repairClassificationService";
 import { log } from "@/src/utils/logger";
 
 const SERVICE = "scoringService";
@@ -49,16 +50,13 @@ function estimateRepairCost(type: string, size_m2: number | null): number {
   return size_m2 ? size_m2 * 150 : 9_000;
 }
 
-const MAJOR_REPAIR_KEYWORDS = ["putki", "linjasaneeraus", "julkisivu", "katto", "peruskorjaus"];
-
-function isMajorRepair(type: string): boolean {
-  const t = type.toLowerCase();
-  return MAJOR_REPAIR_KEYWORDS.some((kw) => t.includes(kw));
+function isMajor(r: UpcomingRepair | { category?: string; type: string }): boolean {
+  return r.category === "major";
 }
 
 function soonMajorRepairs(upcoming: UpcomingRepair[], withinYears: number): UpcomingRepair[] {
   return upcoming.filter(
-    (r) => isMajorRepair(r.type) && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + withinYears)
+    (r) => isMajor(r) && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + withinYears)
   );
 }
 
@@ -110,7 +108,7 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
   // ── Building age ─────────────────────────────────────────────────────
   if (b.year !== null) {
     const hasRecentMajorReno = r.last_major.some(
-      (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && isMajorRepair(reno.type)
+      (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && reno.category === "major"
     );
 
     if (b.year < 1960 && !hasRecentMajorReno) {
@@ -120,11 +118,30 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
       factors.push({ label: "Vanha rakennus, ei viimeaikaisia remontteja", impact: 1, reason: `Rak. ${b.year}` });
       score += 1;
     }
+
+    // ── Putkiremontti warning for pre-1990 buildings ──────────────────
+    const hasPipeReno = r.last_major.some((reno) => {
+      const t = reno.type.toLowerCase();
+      return t.includes("putki") || t.includes("linjasaneeraus");
+    });
+    const pipeUpcoming = r.upcoming.some((reno) => {
+      const t = reno.type.toLowerCase();
+      return t.includes("putki") || t.includes("linjasaneeraus");
+    });
+
+    if (b.year < 1990 && !hasPipeReno && !pipeUpcoming) {
+      factors.push({
+        label: "Putkiremontti todennäköinen lähivuosina",
+        impact: 1.5,
+        reason: `Rak. ${b.year}, ei merkintää putkiremontista`,
+      });
+      score += 1.5;
+    }
   }
 
   // ── Recent major renovation (positive) ───────────────────────────────
   const recentMajor = r.last_major.filter(
-    (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && isMajorRepair(reno.type)
+    (reno) => reno.year !== null && reno.year >= CURRENT_YEAR - 10 && reno.category === "major"
   );
   if (recentMajor.length > 0) {
     factors.push({
@@ -157,13 +174,13 @@ function computeMonthlyCost(data: HousingData): number {
   const size = data.building.size_m2;
 
   const base =
-    (f.maintenance_fee_monthly ?? 200) +   // fallback if not found
+    (f.maintenance_fee_monthly ?? 200) +
     (f.financing_fee_monthly ?? 0);
 
-  // Amortize upcoming repairs over 60 months (5 years)
+  // Only amortize major and unknown upcoming repairs — minor repairs are noise
   const repairMonthly = data.repairs.upcoming
-    .filter((r) => r.planned_year === null || r.planned_year <= CURRENT_YEAR + 10)
-    .reduce((sum, r) => sum + estimateRepairCost(r.type, size) / 60, 0);
+    .filter((r) => r.category !== "minor" && (r.planned_year === null || r.planned_year <= CURRENT_YEAR + 10))
+    .reduce((sum, r) => sum + estimateRepairCost(r.type, size) * repairWeight(r.type) / 60, 0);
 
   return Math.round(base + repairMonthly);
 }
@@ -205,7 +222,7 @@ function generateRedFlags(data: HousingData, factors: ScoringFactor[]): string[]
   });
 
   // Extra flags not captured in scoring
-  const highConfidenceUpcoming = r.upcoming.filter((x) => x.confidence === "high" && !isMajorRepair(x.type));
+  const highConfidenceUpcoming = r.upcoming.filter((x) => x.confidence === "high" && x.category !== "major");
   highConfidenceUpcoming.forEach((rep) => {
     flags.push(`Remontti tulossa: ${rep.type}${rep.planned_year ? ` (${rep.planned_year})` : ""}`);
   });
