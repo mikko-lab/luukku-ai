@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Asuntoanalyysi – kiinteistöriskianalyysi",
   description: "Analysoi isännöitsijäntodistus tai taloyhtiön tilinpäätös tekoälyllä.",
+  authors: [{ name: "wpsaavutettavuus.fi", url: "https://wpsaavutettavuus.fi" }],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
