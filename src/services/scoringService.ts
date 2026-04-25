@@ -231,6 +231,29 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
     }
   }
 
+  // ── Energy class risk ────────────────────────────────────────────────
+  const ec = data.building.energy_class;
+  if (ec === "E") {
+    factors.push({ label: "Heikko energialuokka", impact: 0.5, reason: `Luokka ${ec} — energiatehokkuusparannukset todennäköisiä` });
+    score += 0.5;
+  } else if (ec === "F" || ec === "G") {
+    factors.push({ label: "Erittäin heikko energialuokka", impact: 1.5, reason: `Luokka ${ec} — EPBD-direktiivin vaatimukset voivat edellyttää kalliita investointeja` });
+    score += 1.5;
+  } else if (ec !== null && (ec === "A" || ec === "B")) {
+    factors.push({ label: "Hyvä energialuokka", impact: -0.5, reason: `Luokka ${ec}` });
+    score -= 0.5;
+  }
+
+  // Heating system risk (oil = extra penalty, heat pump = slight positive)
+  const hs = data.building.heating_system?.toLowerCase() ?? "";
+  if (hs.includes("öljy")) {
+    factors.push({ label: "Öljylämmitys", impact: 1, reason: "Öljykattilan poisto edessä, konversio kallis" });
+    score += 1;
+  } else if (hs.includes("maalämpö") || hs.includes("poistoilma")) {
+    factors.push({ label: "Moderni lämmitysjärjestelmä", impact: -0.3, reason: data.building.heating_system ?? "" });
+    score -= 0.3;
+  }
+
   // ── Land lease risk ──────────────────────────────────────────────────
   const land = data.land;
   if (land.owns_land === false) {

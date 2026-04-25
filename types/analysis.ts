@@ -28,6 +28,8 @@ export interface ExtractedData {
   loan_per_m2: number | null;
   housing_company_debt_total: number | null;
   repair_fund: number | null;
+  energy_class: string | null;
+  heating_system: string | null;
   owns_land: boolean | null;
   ground_rent_monthly: number | null;
   lease_end_year: number | null;

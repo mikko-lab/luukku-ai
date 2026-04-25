@@ -38,6 +38,8 @@ Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
 Land: "oma tontti"/"yhtiö omistaa tontin"→owns_land=true, "vuokratontti"/"maanvuokra"→owns_land=false.
 lease_end_year: the year the land lease (maanvuokrasopimus/tonttivuokrasopimus) expires — extract the exact year.
 ground_rent_monthly: monthly ground rent in euros (tonttivuokra €/kk or annual ÷ 12).
+energy_class: single letter A–G from energiatodistus/energialuokka. Return null if not mentioned.
+heating_system: exact heating method in Finnish (e.g. "kaukolämpö", "maalämpö", "poistoilmalämpöpumppu", "öljylämmitys", "sähkölämmitys"). Return null if not mentioned.
 Use null for missing values. Numbers only (no strings like "200 €").
 CRITICAL: maintenance_fee_monthly and financing_fee_monthly must be the TOTAL monthly fee for this apartment in euros.
 If the document lists fees per share (€/osake/kk), multiply by the apartment's share count to get the total.
@@ -66,6 +68,8 @@ Return ONLY JSON:
 - owns_land (boolean|null) — true if yhtiö omistaa tontin, false if vuokratontti, null if not mentioned
 - ground_rent_monthly (number|null) — monthly ground rent in euros; if annual, divide by 12
 - lease_end_year (number|null) — year the land lease expires (e.g. 2045); null if not mentioned or owns land
+- energy_class (string|null) — single letter A–G from energiatodistus; null if not found
+- heating_system (string|null) — heating method in Finnish (kaukolämpö, maalämpö, etc.); null if not found
 - repairs_raw (string[] — every sentence mentioning renovations or repairs)
 
 Document:
@@ -254,6 +258,8 @@ export async function extractHousingData(text: string): Promise<HousingData> {
     building: {
       year: raw.building_year,
       size_m2: raw.apartment_size_m2,
+      energy_class: raw.energy_class as HousingData["building"]["energy_class"],
+      heating_system: raw.heating_system,
     },
     repairs: {
       last_major: dedupedCompleted,

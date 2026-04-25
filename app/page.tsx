@@ -535,14 +535,26 @@ export default function Home() {
                         {([
                           ["Rakennusvuosi", result.extracted.building_year],
                           ["Pinta-ala", result.extracted.apartment_size_m2 ? `${result.extracted.apartment_size_m2} m²` : null],
+                          ["Energialuokka", result.extracted.energy_class ?? null],
+                          ["Lämmitys", result.extracted.heating_system ?? null],
                           ["Hoitovastike", result.extracted.maintenance_fee_monthly ? `${result.extracted.maintenance_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
                           ["Rahoitusvastike", result.extracted.financing_fee_monthly ? `${result.extracted.financing_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
-                        ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => (
-                          <div key={label} className="flex justify-between text-sm py-2 border-b border-gray-50">
-                            <span className="text-gray-600">{label}</span>
-                            <span className="font-semibold text-gray-800">{String(value)}</span>
-                          </div>
-                        ))}
+                        ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => {
+                          const isEnergyClass = label === "Energialuokka";
+                          const ec = String(value);
+                          const energyColor = isEnergyClass
+                            ? (ec === "A" || ec === "B") ? "text-green-700"
+                            : (ec === "C" || ec === "D") ? "text-gray-800"
+                            : ec === "E" ? "text-amber-700"
+                            : "text-red-700"
+                            : "text-gray-800";
+                          return (
+                            <div key={label} className="flex justify-between text-sm py-2 border-b border-gray-50">
+                              <span className="text-gray-600">{label}</span>
+                              <span className={`font-semibold ${energyColor}`}>{ec}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Talous</p>

@@ -37,6 +37,8 @@ export interface RawExtractedFields {
   owns_land: boolean | null;
   ground_rent_monthly: number | null;
   lease_end_year: number | null;
+  energy_class: string | null;
+  heating_system: string | null;
 }
 
 function num(v: unknown): number | null {
@@ -74,6 +76,8 @@ export function ensureSchema(data: unknown): RawExtractedFields {
     owns_land: bool(d?.owns_land),
     ground_rent_monthly: num(d?.ground_rent_monthly),
     lease_end_year: num(d?.lease_end_year),
+    energy_class: str(d?.energy_class),
+    heating_system: str(d?.heating_system),
   };
 }
 

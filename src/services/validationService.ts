@@ -49,6 +49,11 @@ export function validateHousingData(data: HousingData): HousingData {
     building: {
       year: clamp(b.year, "building_year", "Rakennusvuosi"),
       size_m2: clamp(b.size_m2, "apartment_size_m2", "Pinta-ala"),
+      energy_class: (() => {
+        const ec = b.energy_class?.toUpperCase().trim();
+        return (["A","B","C","D","E","F","G"] as const).includes(ec as "A") ? ec as HousingData["building"]["energy_class"] : null;
+      })(),
+      heating_system: b.heating_system,
     },
     repairs: {
       last_major: data.repairs.last_major.filter((r) => r.type && typeof r.type === "string"),

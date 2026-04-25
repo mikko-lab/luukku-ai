@@ -59,8 +59,10 @@ export function mergeHousingData(primary: HousingData, secondary: HousingData): 
       repair_fund:                primary.financials.repair_fund                ?? secondary.financials.repair_fund,
     },
     building: {
-      year:    primary.building.year    ?? secondary.building.year,
-      size_m2: primary.building.size_m2 ?? secondary.building.size_m2,
+      year:          primary.building.year          ?? secondary.building.year,
+      size_m2:       primary.building.size_m2       ?? secondary.building.size_m2,
+      energy_class:  primary.building.energy_class  ?? secondary.building.energy_class,
+      heating_system: primary.building.heating_system ?? secondary.building.heating_system,
     },
     repairs: {
       // Combine repair histories from both documents, deduplicate by type+year

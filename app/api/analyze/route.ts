@@ -143,6 +143,8 @@ export async function POST(req: NextRequest) {
         loan_per_m2: data.financials.loan_per_m2,
         housing_company_debt_total: data.financials.housing_company_debt_total,
         repair_fund: data.financials.repair_fund,
+        energy_class: data.building.energy_class,
+        heating_system: data.building.heating_system,
         owns_land: data.land.owns_land,
         ground_rent_monthly: data.land.ground_rent_monthly,
         lease_end_year: data.land.lease_end_year,
