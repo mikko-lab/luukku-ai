@@ -35,6 +35,9 @@ Return ONLY valid JSON, no markdown, no explanation.
 Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike=financing_fee_monthly,
 Yhtiölaina/osuus=loan_per_share, Velka/m2=loan_per_m2, Rakennusvuosi=building_year,
 Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
+Land: "oma tontti"/"yhtiö omistaa tontin"→owns_land=true, "vuokratontti"/"maanvuokra"→owns_land=false.
+lease_end_year: the year the land lease (maanvuokrasopimus/tonttivuokrasopimus) expires — extract the exact year.
+ground_rent_monthly: monthly ground rent in euros (tonttivuokra €/kk or annual ÷ 12).
 Use null for missing values. Numbers only (no strings like "200 €").
 CRITICAL: maintenance_fee_monthly and financing_fee_monthly must be the TOTAL monthly fee for this apartment in euros.
 If the document lists fees per share (€/osake/kk), multiply by the apartment's share count to get the total.
@@ -60,6 +63,9 @@ Return ONLY JSON:
 - repair_fund (number|null)
 - city (string|null)
 - address (string|null)
+- owns_land (boolean|null) — true if yhtiö omistaa tontin, false if vuokratontti, null if not mentioned
+- ground_rent_monthly (number|null) — monthly ground rent in euros; if annual, divide by 12
+- lease_end_year (number|null) — year the land lease expires (e.g. 2045); null if not mentioned or owns land
 - repairs_raw (string[] — every sentence mentioning renovations or repairs)
 
 Document:
@@ -234,6 +240,11 @@ export async function extractHousingData(text: string): Promise<HousingData> {
     market: {
       avg_price_m2: null,
       deviation_percent: null,
+    },
+    land: {
+      owns_land: raw.owns_land,
+      ground_rent_monthly: raw.ground_rent_monthly,
+      lease_end_year: raw.lease_end_year,
     },
   };
 }

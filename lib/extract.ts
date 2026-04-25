@@ -54,6 +54,9 @@ export async function extractFromPDF(text: string): Promise<ExtractedData> {
     loan_per_m2: parsed.loan_per_m2 ?? null,
     housing_company_debt_total: parsed.housing_company_debt_total ?? null,
     repair_fund: parsed.repair_fund ?? null,
+    owns_land: typeof parsed.owns_land === "boolean" ? parsed.owns_land : null,
+    ground_rent_monthly: parsed.ground_rent_monthly ?? null,
+    lease_end_year: parsed.lease_end_year ?? null,
     last_major_renovations: Array.isArray(parsed.last_major_renovations)
       ? parsed.last_major_renovations
       : [],

@@ -73,6 +73,11 @@ export function mergeHousingData(primary: HousingData, secondary: HousingData): 
       avg_price_m2:      primary.market.avg_price_m2      ?? secondary.market.avg_price_m2,
       deviation_percent: primary.market.deviation_percent ?? secondary.market.deviation_percent,
     },
+    land: {
+      owns_land:            primary.land.owns_land            ?? secondary.land.owns_land,
+      ground_rent_monthly:  primary.land.ground_rent_monthly  ?? secondary.land.ground_rent_monthly,
+      lease_end_year:       primary.land.lease_end_year       ?? secondary.land.lease_end_year,
+    },
   };
 
   log(SERVICE, "Merged two documents", {

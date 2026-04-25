@@ -550,11 +550,13 @@ export default function Home() {
                           ["Laina/osake", result.extracted.loan_per_share ? `${result.extracted.loan_per_share.toLocaleString("fi-FI")} €` : null],
                           ["Yhtiölaina yht.", result.extracted.housing_company_debt_total ? `${result.extracted.housing_company_debt_total.toLocaleString("fi-FI")} €` : null],
                           ["Korjausrahasto", result.extracted.repair_fund ? `${result.extracted.repair_fund.toLocaleString("fi-FI")} €` : null],
+                          ["Tonttivuokra", result.extracted.ground_rent_monthly ? `${result.extracted.ground_rent_monthly.toLocaleString("fi-FI")} €/kk` : null],
+                          ["Tontti", result.extracted.owns_land === true ? "Oma tontti" : result.extracted.owns_land === false ? `Vuokratontti${result.extracted.lease_end_year ? ` (päättyy ${result.extracted.lease_end_year})` : ""}` : null],
                           ["Arvioitu kk-kulu", `${result.monthly_cost.toLocaleString("fi-FI")} €/kk`],
                         ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => (
                           <div key={label} className="flex justify-between text-sm py-2 border-b border-gray-50">
                             <span className="text-gray-600">{label}</span>
-                            <span className="font-semibold text-gray-800">{String(value)}</span>
+                            <span className={`font-semibold ${label === "Tontti" && result.extracted.owns_land === false ? "text-amber-700" : "text-gray-800"}`}>{String(value)}</span>
                           </div>
                         ))}
                       </div>

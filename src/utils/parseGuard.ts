@@ -34,6 +34,9 @@ export interface RawExtractedFields {
   city: string | null;
   address: string | null;
   repairs_raw: string[];
+  owns_land: boolean | null;
+  ground_rent_monthly: number | null;
+  lease_end_year: number | null;
 }
 
 function num(v: unknown): number | null {
@@ -42,6 +45,13 @@ function num(v: unknown): number | null {
 
 function str(v: unknown): string | null {
   return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+}
+
+function bool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return null;
 }
 
 export function ensureSchema(data: unknown): RawExtractedFields {
@@ -61,6 +71,9 @@ export function ensureSchema(data: unknown): RawExtractedFields {
     repairs_raw: Array.isArray(d?.repairs_raw)
       ? (d.repairs_raw as unknown[]).filter((x): x is string => typeof x === "string")
       : [],
+    owns_land: bool(d?.owns_land),
+    ground_rent_monthly: num(d?.ground_rent_monthly),
+    lease_end_year: num(d?.lease_end_year),
   };
 }
 

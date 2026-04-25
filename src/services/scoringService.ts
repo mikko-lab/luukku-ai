@@ -220,6 +220,29 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
     }
   }
 
+  // ── Land lease risk ──────────────────────────────────────────────────
+  const land = data.land;
+  if (land.owns_land === false) {
+    const yearsLeft = land.lease_end_year !== null ? land.lease_end_year - CURRENT_YEAR : null;
+    if (yearsLeft !== null && yearsLeft <= 5) {
+      factors.push({ label: "Tonttivuokrasopimus päättyy pian", impact: 3, reason: `${land.lease_end_year}` });
+      score += 3;
+    } else if (yearsLeft !== null && yearsLeft <= 10) {
+      factors.push({ label: "Tonttivuokrasopimus päättyy lähivuosina", impact: 2, reason: `${land.lease_end_year}` });
+      score += 2;
+    } else if (yearsLeft !== null && yearsLeft <= 20) {
+      factors.push({ label: "Vuokratontti — sopimus päättyy 20v sisällä", impact: 1, reason: `${land.lease_end_year}` });
+      score += 1;
+    } else if (yearsLeft === null) {
+      factors.push({ label: "Vuokratontti — päättymisaika tuntematon", impact: 0.5, reason: "Tarkista maanvuokrasopimus" });
+      score += 0.5;
+    }
+    // Leased land with >20y remaining — flag only, no score increase
+    if (yearsLeft !== null && yearsLeft > 20) {
+      factors.push({ label: "Vuokratontti", impact: 0, reason: `Sopimus päättyy ${land.lease_end_year}` });
+    }
+  }
+
   // ── No repair fund data ───────────────────────────────────────────────
   if (f.repair_fund === null) {
     factors.push({ label: "Korjausrahastotieto puuttuu", impact: 0.5, reason: "Ei tietoa puskurista" });
@@ -243,7 +266,8 @@ function computeMonthlyCost(data: HousingData): number {
 
   const base =
     (f.maintenance_fee_monthly ?? 200) +
-    (f.financing_fee_monthly ?? 0);
+    (f.financing_fee_monthly ?? 0) +
+    (data.land.ground_rent_monthly ?? 0);
 
   // Only amortize major and unknown upcoming repairs — minor repairs are noise
   // repairWeight is for risk scoring only, not cost multiplication

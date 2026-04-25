@@ -44,12 +44,19 @@ export interface MarketData {
   deviation_percent: number | null;
 }
 
+export interface LandData {
+  owns_land: boolean | null;       // true = oma tontti, false = vuokratontti
+  ground_rent_monthly: number | null;
+  lease_end_year: number | null;
+}
+
 export interface HousingData {
   location: LocationData;
   financials: FinancialData;
   building: BuildingData;
   repairs: RepairData;
   market: MarketData;
+  land: LandData;
 }
 
 export interface ScoringFactor {
@@ -80,6 +87,9 @@ export interface ApiResponse extends AnalysisOutput {
     loan_per_m2: number | null;
     housing_company_debt_total: number | null;
     repair_fund: number | null;
+    owns_land: boolean | null;
+    ground_rent_monthly: number | null;
+    lease_end_year: number | null;
     last_major_renovations: Renovation[];
     upcoming_repairs: UpcomingRepair[];
     red_flags_detected: never[];

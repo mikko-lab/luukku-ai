@@ -12,6 +12,8 @@ const BOUNDS = {
   repair_fund: { min: 0, max: 10_000_000 },
   building_year: { min: 1800, max: new Date().getFullYear() },
   apartment_size_m2: { min: 10, max: 1000 },
+  ground_rent_monthly: { min: 0, max: 50_000 },
+  lease_end_year: { min: new Date().getFullYear(), max: 2200 },
 };
 
 function clamp(
@@ -51,6 +53,11 @@ export function validateHousingData(data: HousingData): HousingData {
     repairs: {
       last_major: data.repairs.last_major.filter((r) => r.type && typeof r.type === "string"),
       upcoming: data.repairs.upcoming.filter((r) => r.type && typeof r.type === "string"),
+    },
+    land: {
+      owns_land: data.land.owns_land,
+      ground_rent_monthly: clamp(data.land.ground_rent_monthly, "ground_rent_monthly", "Tonttivuokra"),
+      lease_end_year: clamp(data.land.lease_end_year, "lease_end_year", "Vuokrasopimus päättyy"),
     },
   };
 
