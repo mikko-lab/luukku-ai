@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { AnalysisResult, UpcomingRepair } from "@/types/analysis";
+import { Sidebar } from "./_components/Sidebar";
 
 type AppState = "idle" | "loading" | "done" | "error";
 type UserInfo = { id: string; email: string; office_name: string; credits_remaining: number };
@@ -56,82 +57,6 @@ function RiskGauge({ score }: { score: number }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Sidebar                                                             */
-/* ------------------------------------------------------------------ */
-
-const NAV_ITEMS = [
-  { label: "Uusi analyysi", active: true,
-    icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /> },
-  { label: "Analyysit", active: false,
-    icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 10h16M4 14h16M4 18h16" /> },
-  { label: "Kohteet", active: false,
-    icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /> },
-  { label: "Raportit", active: false,
-    icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
-  { label: "Asetukset", active: false,
-    icon: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></> },
-  { label: "Ohjeet", active: false,
-    icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> },
-];
-
-function NavIcon({ d }: { d: React.ReactNode }) {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      {d}
-    </svg>
-  );
-}
-
-function Sidebar({ user, onLogout }: { user: UserInfo | null; onLogout: () => void }) {
-  return (
-    <aside className="w-52 shrink-0 bg-[#111827] flex flex-col h-screen sticky top-0">
-      <div className="px-5 pt-5 pb-4 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-apple-blue flex items-center justify-center shrink-0">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-            </svg>
-          </div>
-          <span className="text-white font-black tracking-tight text-sm">
-            Luukku<span className="text-apple-blue">-AI</span>
-          </span>
-        </div>
-        {user && <p className="text-xs text-gray-500 mt-2 truncate">{user.office_name}</p>}
-      </div>
-
-      <nav className="flex-1 px-2 py-3 space-y-0.5" aria-label="Päänavigaatio">
-        {NAV_ITEMS.map((item) => (
-          <button key={item.label} disabled={!item.active}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2.5 ${
-              item.active ? "bg-white/10 text-white font-medium" : "text-gray-600 cursor-default"
-            }`}>
-            <NavIcon d={item.icon} />
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="mx-3 mb-3 rounded-xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 p-3">
-        <p className="text-xs font-semibold text-white">Pro-jäsenyys</p>
-        <p className="text-[10px] text-gray-400 mt-0.5">Voimassa 31.12.2025 asti</p>
-        <button className="mt-2 w-full py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] text-white font-medium transition-colors">
-          Päivitä tilaus
-        </button>
-      </div>
-
-      {user && (
-        <div className="px-4 py-3 border-t border-white/5">
-          <p className="text-xs text-gray-400 font-medium truncate">{user.office_name}</p>
-          <p className="text-[11px] text-gray-600 truncate">{user.email}</p>
-          <button onClick={onLogout} className="mt-1.5 text-[11px] text-gray-600 hover:text-gray-400 transition-colors">
-            Kirjaudu ulos
-          </button>
-        </div>
-      )}
-    </aside>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  File upload                                                         */
@@ -148,7 +73,7 @@ function LoadedFile({ file, label, onRemove }: { file: File; label: string; onRe
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-        <p className="text-[11px] text-gray-400">{sizeKb} KB · {label}</p>
+        <p className="text-[11px] text-gray-500">{sizeKb} KB · {label}</p>
       </div>
       <button onClick={onRemove} className="text-xs text-gray-400 hover:text-red-500 transition-colors px-1">Poista</button>
     </div>
@@ -187,7 +112,7 @@ function DropZone({ label, hint, onFile, optional }: {
       <p className="text-xs font-semibold text-gray-700 text-center">
         {label}{optional && <span className="font-normal text-gray-400"> (valinnainen)</span>}
       </p>
-      <p className="text-[11px] text-gray-400 mt-0.5">{hint}</p>
+      <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
     </div>
   );
 }
@@ -201,7 +126,7 @@ function CategoryBar({ label, score, max = 5 }: { label: string; score: number; 
   const color = frac > 0.6 ? "bg-red-400" : frac > 0.3 ? "bg-amber-400" : "bg-green-400";
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-500 w-20 shrink-0">{label}</span>
+      <span className="text-xs text-gray-600 w-20 shrink-0">{label}</span>
       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.max(frac * 100, 4)}%` }} />
       </div>
@@ -231,7 +156,7 @@ function ConfidenceCard({ result }: { result: AnalysisResult }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-card p-6">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Analyysin luotettavuus</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-4">Analyysin luotettavuus</h2>
       <div className="flex items-center gap-3 mb-4">
         <div className="relative w-12 h-12 shrink-0">
           <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
@@ -245,7 +170,7 @@ function ConfidenceCard({ result }: { result: AnalysisResult }) {
         </div>
         <div>
           <p className={`text-sm font-semibold ${levelColor}`}>{levelFi}</p>
-          <p className="text-[11px] text-gray-400">{(pct / 100).toFixed(2)} / 1.00</p>
+          <p className="text-[11px] text-gray-500">{(pct / 100).toFixed(2)} / 1.00</p>
         </div>
       </div>
       <div className="space-y-2">
@@ -256,7 +181,7 @@ function ConfidenceCard({ result }: { result: AnalysisResult }) {
                 ? <svg className="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                 : <svg className="w-2 h-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>}
             </div>
-            <span className={`text-xs ${c.ok ? "text-gray-700" : "text-gray-400"}`}>{c.label}</span>
+            <span className={`text-xs ${c.ok ? "text-gray-700" : "text-gray-500"}`}>{c.label}</span>
           </div>
         ))}
       </div>
@@ -295,7 +220,24 @@ function CopyButton({ result, file2 }: { result: AnalysisResult; file2: boolean 
     return lines.join("\n");
   }
   async function copy() {
-    try { await navigator.clipboard.writeText(buildText()); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
+    const text = buildText();
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
   }
   return (
     <button onClick={copy} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
@@ -318,7 +260,7 @@ function InfoPanel() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl shadow-card p-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-5">Mitä saat analyysistä</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-5">Mitä saat analyysistä</h2>
         <div className="space-y-4">
           {items.map((item) => (
             <div key={item.n} className="flex gap-3">
@@ -327,7 +269,7 @@ function InfoPanel() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
+                <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -339,7 +281,7 @@ function InfoPanel() {
             <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
           </svg>
         </div>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-gray-600 leading-relaxed">
           Dokumentteja ei tallenneta palvelimelle. Analyysi tehdään muistissa ja tiedostot poistetaan välittömästi käsittelyn jälkeen.
         </p>
       </div>
@@ -470,7 +412,7 @@ export default function Home() {
         <header className="shrink-0 bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-gray-900">Uusi riskianalyysi</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Lataa isännöitsijäntodistus ja/tai tilinpäätös ja käynnistä analyysi</p>
+            <p className="text-xs text-gray-500 mt-0.5">Lataa isännöitsijäntodistus ja/tai tilinpäätös ja käynnistä analyysi</p>
           </div>
           {user && (
             <div className="flex items-center gap-3">
@@ -501,7 +443,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-semibold text-gray-800">Lataa dokumentit</h2>
                   {hasFiles && (
-                    <span className="text-xs text-gray-400">Ladatut tiedostot ({[file1, file2].filter(Boolean).length})</span>
+                    <span className="text-xs text-gray-500">Ladatut tiedostot ({[file1, file2].filter(Boolean).length})</span>
                   )}
                 </div>
 
@@ -562,7 +504,7 @@ export default function Home() {
                 )}
 
                 <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-gray-400">Tulosta kohteen PDF (max 50 MB)</p>
+                  <p className="text-xs text-gray-500">Tulosta kohteen PDF (max 50 MB)</p>
                   {isDone && (
                     <button onClick={downloadReport}
                       className="text-xs font-semibold text-apple-blue hover:underline underline-offset-2">
@@ -586,10 +528,10 @@ export default function Home() {
 
                   {/* Yhteenveto */}
                   <div className="bg-white rounded-2xl shadow-card p-7">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-5">Yhteenveto</h2>
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-5">Yhteenveto</h2>
                     <div className="grid grid-cols-2 gap-8">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Rakennus</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Rakennus</p>
                         {([
                           ["Rakennusvuosi", result.extracted.building_year],
                           ["Pinta-ala", result.extracted.apartment_size_m2 ? `${result.extracted.apartment_size_m2} m²` : null],
@@ -597,13 +539,13 @@ export default function Home() {
                           ["Rahoitusvastike", result.extracted.financing_fee_monthly ? `${result.extracted.financing_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
                         ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => (
                           <div key={label} className="flex justify-between text-sm py-2 border-b border-gray-50">
-                            <span className="text-gray-500">{label}</span>
+                            <span className="text-gray-600">{label}</span>
                             <span className="font-semibold text-gray-800">{String(value)}</span>
                           </div>
                         ))}
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Talous</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Talous</p>
                         {([
                           ["Laina/osake", result.extracted.loan_per_share ? `${result.extracted.loan_per_share.toLocaleString("fi-FI")} €` : null],
                           ["Yhtiölaina yht.", result.extracted.housing_company_debt_total ? `${result.extracted.housing_company_debt_total.toLocaleString("fi-FI")} €` : null],
@@ -611,7 +553,7 @@ export default function Home() {
                           ["Arvioitu kk-kulu", `${result.monthly_cost.toLocaleString("fi-FI")} €/kk`],
                         ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => (
                           <div key={label} className="flex justify-between text-sm py-2 border-b border-gray-50">
-                            <span className="text-gray-500">{label}</span>
+                            <span className="text-gray-600">{label}</span>
                             <span className="font-semibold text-gray-800">{String(value)}</span>
                           </div>
                         ))}
@@ -622,14 +564,14 @@ export default function Home() {
                   {/* Remontit */}
                   {(knownRepairs.length > 0 || knownRenovations.length > 0) && (
                     <div className="bg-white rounded-2xl shadow-card p-7">
-                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-5">Suunnitellut ja tehdyt remontit</h2>
+                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-5">Suunnitellut ja tehdyt remontit</h2>
 
                       {knownRepairs.length > 0 && (
                         <div className="mb-6">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Tulevat</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Tulevat</p>
                           <table className="w-full">
                             <thead>
-                              <tr className="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                              <tr className="text-[10px] uppercase tracking-wide text-gray-600 border-b border-gray-100">
                                 <th className="text-left pb-2 font-medium w-12">Vuosi</th>
                                 <th className="text-left pb-2 font-medium">Remontti / toimenpide</th>
                                 <th className="text-left pb-2 font-medium">Tyyppi</th>
@@ -646,7 +588,7 @@ export default function Home() {
                                   ? `n. ${r.cost_estimate_eur.toLocaleString("fi-FI")} €` : "—";
                                 return (
                                   <tr key={i} className="border-b border-gray-50 last:border-0">
-                                    <td className="py-3 pr-3 text-sm text-gray-500">{r.planned_year ?? "—"}</td>
+                                    <td className="py-3 pr-3 text-sm text-gray-600">{r.planned_year ?? "—"}</td>
                                     <td className="py-3 pr-3 text-sm font-medium text-gray-800">{r.type}</td>
                                     <td className="py-3 pr-3">
                                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${confBadge}`}>
@@ -669,12 +611,12 @@ export default function Home() {
 
                       {knownRenovations.length > 0 && (
                         <>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Tehdyt</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Tehdyt</p>
                           <table className="w-full">
                             <tbody>
                               {knownRenovations.map((r, i) => (
                                 <tr key={i} className="border-b border-gray-50 last:border-0">
-                                  <td className="py-2.5 pr-3 text-sm text-gray-500 w-12">{r.year ?? "—"}</td>
+                                  <td className="py-2.5 pr-3 text-sm text-gray-600 w-12">{r.year ?? "—"}</td>
                                   <td className="py-2.5 text-sm text-gray-700">{r.type}</td>
                                   <td className="py-2.5 text-right">
                                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Tehty</span>
@@ -689,7 +631,7 @@ export default function Home() {
                   )}
 
                   <button onClick={reset}
-                    className="w-full py-2 text-sm text-gray-400 hover:text-gray-700 transition-colors">
+                    className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
                     Analysoi uusi kohde
                   </button>
                 </div>
@@ -704,18 +646,18 @@ export default function Home() {
                   <div className="bg-white rounded-2xl shadow-card p-6">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">Analyysi valmis</span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-gray-500">
                         {new Date().toLocaleDateString("fi-FI")}{analysisTime ? ` · ${analysisTime} s` : ""}
                       </span>
                     </div>
                     <RiskGauge score={result.risk_score} />
                     <p className={`text-lg font-black mt-1 text-center tracking-tight ${verdictColor}`}>{result.verdict}</p>
-                    <p className="text-[11px] text-gray-500 mt-1.5 text-center leading-relaxed px-1">{verdictDesc}</p>
+                    <p className="text-[11px] text-gray-600 mt-1.5 text-center leading-relaxed px-1">{verdictDesc}</p>
                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-baseline justify-between">
-                      <p className="text-xs text-gray-400">Kk-kulu</p>
+                      <p className="text-xs text-gray-500">Kk-kulu</p>
                       <p className="text-2xl font-black text-gray-900">
                         {result.monthly_cost.toLocaleString("fi-FI")}
-                        <span className="text-sm font-normal text-gray-400"> €/kk</span>
+                        <span className="text-sm font-normal text-gray-500"> €/kk</span>
                       </p>
                     </div>
                   </div>
@@ -723,7 +665,7 @@ export default function Home() {
                   {/* Risk factors */}
                   {nonZeroFactors.length > 0 && (
                     <div className="bg-white rounded-2xl shadow-card p-6">
-                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Tärkeimmät riskitekijät</h2>
+                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">Tärkeimmät riskitekijät</h2>
                       <div className="space-y-2.5">
                         {visibleFactors.map((f, i) => (
                           <div key={i} className="flex items-start justify-between gap-2">
@@ -755,7 +697,7 @@ export default function Home() {
                   {/* Category risk profile */}
                   {categoryRisks.some((c) => c.score > 0) && (
                     <div className="bg-white rounded-2xl shadow-card p-6">
-                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-4">Riskiprofiili kategorioittain</h2>
+                      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-4">Riskiprofiili kategorioittain</h2>
                       <div className="space-y-3">
                         {categoryRisks.map((c) => <CategoryBar key={c.label} label={c.label} score={c.score} />)}
                       </div>
@@ -779,7 +721,7 @@ export default function Home() {
           </div>
 
           <footer className="px-8 pb-6 text-center">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               LUUKKU-AI v1.2.0 ·{" "}
               <a href="#" className="hover:text-gray-600 underline underline-offset-2">Tietosuojaseloste</a>{" "}
               ·{" "}
