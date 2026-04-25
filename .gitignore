@@ -6,3 +6,7 @@ node_modules/
 *.tsbuildinfo
 
 /src/generated/prisma
+
+# Database files
+*.db
+prisma/prod.db
