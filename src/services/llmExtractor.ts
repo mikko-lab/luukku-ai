@@ -161,6 +161,41 @@ ${JSON.stringify(raw.repairs_raw)}`
 }
 
 /* ------------------------------------------------------------------ */
+/*  Post-extraction deduplication                                        */
+/* ------------------------------------------------------------------ */
+
+function normalizeRepairType(type: string): string {
+  const t = type.toLowerCase();
+  if (t.includes("putki") || t.includes("linjasaneeraus")) return "putkiremontti";
+  if (t.includes("julkisivu")) return "julkisivuremontti";
+  if (t.includes("katto")) return "kattoremontti";
+  if (t.includes("kylpyhuone") || t.includes("märkätila")) return "kylpyhuoneremontti";
+  if (t.includes("peruskorjaus")) return "peruskorjaus";
+  return t.slice(0, 14);
+}
+
+function deduplicateCompletedRepairs(repairs: { type: string; year: number | null }[]) {
+  const groups = new Map<string, { type: string; year: number | null }[]>();
+  for (const r of repairs) {
+    const key = normalizeRepairType(r.type);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(r);
+  }
+  const result: { type: string; year: number | null }[] = [];
+  for (const entries of groups.values()) {
+    if (entries.length === 1) { result.push(entries[0]); continue; }
+    // Multiple entries for same type: keep the most recent year
+    const best = entries.reduce((a, b) => {
+      if (a.year === null) return b;
+      if (b.year === null) return a;
+      return b.year > a.year ? b : a;
+    });
+    result.push(best);
+  }
+  return result;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main export                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -169,6 +204,9 @@ export async function extractHousingData(text: string): Promise<HousingData> {
 
   const raw = await extractRaw(text);
   const repairs = await structureRepairs(raw);
+
+  const dedupedCompleted = deduplicateCompletedRepairs(repairs.last_major_renovations);
+  log(SERVICE, `Deduplicated completed repairs: ${repairs.last_major_renovations.length} → ${dedupedCompleted.length}`);
 
   return {
     location: {
@@ -190,7 +228,7 @@ export async function extractHousingData(text: string): Promise<HousingData> {
       size_m2: raw.apartment_size_m2,
     },
     repairs: {
-      last_major: repairs.last_major_renovations,
+      last_major: dedupedCompleted,
       upcoming: repairs.upcoming_repairs,
     },
     market: {

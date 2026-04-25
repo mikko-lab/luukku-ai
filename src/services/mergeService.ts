@@ -3,14 +3,28 @@ import { log } from "@/src/utils/logger";
 
 const SERVICE = "mergeService";
 
+function normalizeRepairKey(type: string): string {
+  const t = type.toLowerCase();
+  if (t.includes("putki") || t.includes("linjasaneeraus")) return "putkiremontti";
+  if (t.includes("julkisivu")) return "julkisivuremontti";
+  if (t.includes("katto")) return "kattoremontti";
+  if (t.includes("kylpyhuone") || t.includes("märkätila")) return "kylpyhuoneremontti";
+  if (t.includes("peruskorjaus")) return "peruskorjaus";
+  return t.slice(0, 14);
+}
+
 function deduplicateRenovations(repairs: Renovation[]): Renovation[] {
-  const seen = new Set<string>();
-  return repairs.filter((r) => {
-    const key = `${r.type.toLowerCase().slice(0, 12)}-${r.year ?? "?"}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const best = new Map<string, Renovation>();
+  for (const r of repairs) {
+    const key = normalizeRepairKey(r.type);
+    const existing = best.get(key);
+    if (!existing) { best.set(key, r); continue; }
+    // Keep most recent year
+    if (r.year !== null && (existing.year === null || r.year > existing.year)) {
+      best.set(key, r);
+    }
+  }
+  return Array.from(best.values());
 }
 
 function deduplicateUpcoming(repairs: UpcomingRepair[]): UpcomingRepair[] {
