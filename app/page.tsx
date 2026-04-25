@@ -16,21 +16,42 @@ const CONFIDENCE_FI: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 function RiskGauge({ score }: { score: number }) {
-  const cx = 100, cy = 88, r = 72;
-  const frac = Math.min(Math.max(score / 10, 0.001), 0.999);
-  const angle = frac * Math.PI;
-  const ex = cx - r * Math.cos(angle);
-  const ey = cy - r * Math.sin(angle);
-  const largeArc = frac > 0.5 ? 1 : 0;
-  const color = score >= 7 ? "#DC2626" : score >= 5 ? "#D97706" : "#16A34A";
+  const cx = 100, cy = 90, r = 68, rNeedle = 52;
+
+  const arcPt = (s: number) => {
+    const a = Math.PI * (1 - s / 10);
+    return { x: cx + r * Math.cos(a), y: cy - r * Math.sin(a) };
+  };
+
+  const p4 = arcPt(4);
+  const p7 = arcPt(7);
+  const a = Math.PI * (1 - Math.min(Math.max(score, 0), 10) / 10);
+  const tip = { x: cx + rNeedle * Math.cos(a), y: cy - rNeedle * Math.sin(a) };
+
+  const scoreColor = score >= 7 ? "#DC2626" : score >= 4 ? "#D97706" : "#16A34A";
+
   return (
-    <svg viewBox="0 0 200 100" className="w-full max-w-[200px] mx-auto" aria-hidden="true">
+    <svg viewBox="0 0 200 98" className="w-full max-w-[220px] mx-auto" aria-hidden="true">
+      {/* Background */}
       <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
-        fill="none" stroke="#F3F4F6" strokeWidth="14" strokeLinecap="round" />
-      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`}
-        fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" />
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="30" fontWeight="700" fill={color}>{score}</text>
-      <text x={cx} y={cy + 11} textAnchor="middle" fontSize="10" fill="#9CA3AF">/ 10</text>
+        fill="none" stroke="#E5E7EB" strokeWidth="13" strokeLinecap="butt" />
+      {/* Green 0–4 */}
+      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${p4.x.toFixed(1)} ${p4.y.toFixed(1)}`}
+        fill="none" stroke="#22C55E" strokeWidth="13" strokeLinecap="butt" />
+      {/* Amber 4–7 */}
+      <path d={`M ${p4.x.toFixed(1)} ${p4.y.toFixed(1)} A ${r} ${r} 0 0 1 ${p7.x.toFixed(1)} ${p7.y.toFixed(1)}`}
+        fill="none" stroke="#F59E0B" strokeWidth="13" strokeLinecap="butt" />
+      {/* Red 7–10 */}
+      <path d={`M ${p7.x.toFixed(1)} ${p7.y.toFixed(1)} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+        fill="none" stroke="#EF4444" strokeWidth="13" strokeLinecap="butt" />
+      {/* Needle */}
+      <line x1={cx} y1={cy} x2={tip.x.toFixed(1)} y2={tip.y.toFixed(1)}
+        stroke="#111827" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r="5.5" fill="#111827" />
+      <circle cx={cx} cy={cy} r="2.5" fill="white" />
+      {/* Score */}
+      <text x={cx} y={cy - 16} textAnchor="middle" fontSize="32" fontWeight="800" fill={scoreColor}>{score}</text>
+      <text x={cx} y={cy - 3} textAnchor="middle" fontSize="9" fill="#9CA3AF">/ 10</text>
     </svg>
   );
 }
@@ -681,17 +702,20 @@ export default function Home() {
                 <>
                   {/* Score card */}
                   <div className="bg-white rounded-2xl shadow-card p-6">
-                    <p className="text-[10px] text-gray-400 text-center mb-1">
-                      Analysoitu {new Date().toLocaleDateString("fi-FI")}{analysisTime ? ` (${analysisTime} s)` : ""}
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">Analyysi valmis</span>
+                      <span className="text-[10px] text-gray-400">
+                        {new Date().toLocaleDateString("fi-FI")}{analysisTime ? ` · ${analysisTime} s` : ""}
+                      </span>
+                    </div>
                     <RiskGauge score={result.risk_score} />
-                    <p className={`text-base font-bold mt-2 text-center ${verdictColor}`}>{result.verdict}</p>
+                    <p className={`text-lg font-black mt-1 text-center tracking-tight ${verdictColor}`}>{result.verdict}</p>
                     <p className="text-[11px] text-gray-500 mt-1.5 text-center leading-relaxed px-1">{verdictDesc}</p>
-                    <div className="mt-4 pt-4 border-t border-gray-50">
-                      <p className="text-xs text-gray-400 mb-1">Arvioitu kuukausikulu</p>
-                      <p className="text-3xl font-black text-gray-900">
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-baseline justify-between">
+                      <p className="text-xs text-gray-400">Kk-kulu</p>
+                      <p className="text-2xl font-black text-gray-900">
                         {result.monthly_cost.toLocaleString("fi-FI")}
-                        <span className="text-base font-normal text-gray-400"> €/kk</span>
+                        <span className="text-sm font-normal text-gray-400"> €/kk</span>
                       </p>
                     </div>
                   </div>
