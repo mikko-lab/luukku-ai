@@ -81,6 +81,14 @@ const REPAIR_IMPACT: Record<string, { weight: number; category: string }> = {
   maalaus:            { weight: -0.2, category: "minor" },
 };
 
+function confidenceMultiplier(c: number | null | undefined): number {
+  if (c === null || c === undefined) return 1.0;
+  if (c >= 0.8) return 1.0;
+  if (c >= 0.6) return 0.75;
+  if (c >= 0.4) return 0.5;
+  return 0.25; // very uncertain — barely counts
+}
+
 function calculateRepairImpact(renovations: HousingData["repairs"]["last_major"]): number {
   let impact = 0;
   for (const r of renovations) {
@@ -89,7 +97,10 @@ function calculateRepairImpact(renovations: HousingData["repairs"]["last_major"]
 
     const t = r.type.toLowerCase();
     const key = Object.keys(REPAIR_IMPACT).find((k) => t.includes(k));
-    if (key) impact += REPAIR_IMPACT[key].weight;
+    if (key) {
+      const mult = confidenceMultiplier(r.extraction_confidence);
+      impact += REPAIR_IMPACT[key].weight * mult;
+    }
   }
   return impact;
 }

@@ -19,8 +19,12 @@ function deduplicateRenovations(repairs: Renovation[]): Renovation[] {
     const key = normalizeRepairKey(r.type);
     const existing = best.get(key);
     if (!existing) { best.set(key, r); continue; }
-    // Keep most recent year
-    if (r.year !== null && (existing.year === null || r.year > existing.year)) {
+    // Prefer higher extraction_confidence; break ties by most recent year
+    const confR = r.extraction_confidence ?? 0.5;
+    const confE = existing.extraction_confidence ?? 0.5;
+    if (Math.abs(confR - confE) > 0.1) {
+      if (confR > confE) best.set(key, r);
+    } else if (r.year !== null && (existing.year === null || r.year > existing.year)) {
       best.set(key, r);
     }
   }

@@ -25,6 +25,8 @@ export interface Renovation {
   type: string;
   year: number | null;
   category?: "major" | "minor" | "unknown";
+  evidence?: string | null;
+  extraction_confidence?: number | null; // 0–1 from LLM
 }
 
 export interface UpcomingRepair {
@@ -32,6 +34,8 @@ export interface UpcomingRepair {
   planned_year: number | null;
   confidence: "high" | "medium" | "low";
   category?: "major" | "minor" | "unknown";
+  evidence?: string | null;
+  extraction_confidence?: number | null; // 0–1 from LLM
 }
 
 export interface RepairData {

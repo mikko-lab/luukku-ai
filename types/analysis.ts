@@ -1,6 +1,8 @@
 export interface Renovation {
   type: string;
   year: number | null;
+  evidence?: string | null;
+  extraction_confidence?: number | null;
 }
 
 export interface UpcomingRepair {
@@ -8,6 +10,8 @@ export interface UpcomingRepair {
   planned_year: number | null;
   confidence: "high" | "medium" | "low";
   cost_estimate_eur?: number | null;
+  evidence?: string | null;
+  extraction_confidence?: number | null;
 }
 
 export interface RedFlag {

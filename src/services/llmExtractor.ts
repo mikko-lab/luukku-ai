@@ -129,12 +129,14 @@ ${text.slice(0, 10000)}`
 /*  Pass 2 — structure repairs                                          */
 /* ------------------------------------------------------------------ */
 
-const PASS2_SYSTEM = `You structure raw Finnish housing repair data into clean JSON.
+const PASS2_SYSTEM = `You are a Finnish technical property manager extracting repair history from housing documents.
 Return ONLY valid JSON, no markdown. Do not invent values.
 completed/done repairs → last_major_renovations, planned/future → upcoming_repairs.
 Major types: putkiremontti, linjasaneeraus, julkisivuremontti, kattoremontti, peruskorjaus, kylpyhuoneremontti, märkätilaremontti.
 Synonyms: märkätila=kylpyhuoneremontti, linjasaneeraus=putkiremontti (use the exact term from the document).
-Time: "tehty 2018"→year=2018, "2026-2028"→planned_year=2027 (midpoint), "tulevina vuosina"→null+confidence=low.`;
+Time: "tehty 2018"→year=2018, "2026-2028"→planned_year=2027 (midpoint), "tulevina vuosina"→null+confidence=low.
+EVIDENCE: For every repair, copy the exact sentence(s) from the source text that mention it.
+EXTRACTION_CONFIDENCE: 0.0–1.0. Use 1.0 for unambiguous year+type. Use 0.7 if year is approximate or inferred. Use 0.5 if ambiguous. Use 0.3 if only implied.`;
 
 async function structureRepairs(raw: { repairs_raw: string[] }) {
   log(SERVICE, "Pass 2: structuring repairs...");
@@ -147,12 +149,27 @@ async function structureRepairs(raw: { repairs_raw: string[] }) {
 
   const result = await callClaude(
     PASS2_SYSTEM,
-    `Structure these repair mentions into clean JSON.
+    `Structure these repair mentions into clean JSON. For each repair include a direct quote from the source.
 
 Return ONLY:
 {
-  "last_major_renovations": [{ "type": string, "year": number|null }],
-  "upcoming_repairs": [{ "type": string, "planned_year": number|null, "confidence": "high"|"medium"|"low" }]
+  "last_major_renovations": [
+    {
+      "type": string,
+      "year": number|null,
+      "evidence": string,
+      "extraction_confidence": number
+    }
+  ],
+  "upcoming_repairs": [
+    {
+      "type": string,
+      "planned_year": number|null,
+      "confidence": "high"|"medium"|"low",
+      "evidence": string,
+      "extraction_confidence": number
+    }
+  ]
 }
 
 Repair sentences:
@@ -180,18 +197,23 @@ function normalizeRepairType(type: string): string {
   return t.slice(0, 14);
 }
 
-function deduplicateCompletedRepairs(repairs: { type: string; year: number | null }[]) {
-  const groups = new Map<string, { type: string; year: number | null }[]>();
+type CompletedRepair = { type: string; year: number | null; evidence?: string | null; extraction_confidence?: number | null };
+
+function deduplicateCompletedRepairs(repairs: CompletedRepair[]): CompletedRepair[] {
+  const groups = new Map<string, CompletedRepair[]>();
   for (const r of repairs) {
     const key = normalizeRepairType(r.type);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(r);
   }
-  const result: { type: string; year: number | null }[] = [];
+  const result: CompletedRepair[] = [];
   for (const entries of groups.values()) {
     if (entries.length === 1) { result.push(entries[0]); continue; }
-    // Multiple entries for same type: keep the most recent year
+    // Multiple entries: prefer highest extraction_confidence, break ties by most recent year
     const best = entries.reduce((a, b) => {
+      const confA = a.extraction_confidence ?? 0.5;
+      const confB = b.extraction_confidence ?? 0.5;
+      if (Math.abs(confA - confB) > 0.1) return confA > confB ? a : b;
       if (a.year === null) return b;
       if (b.year === null) return a;
       return b.year > a.year ? b : a;

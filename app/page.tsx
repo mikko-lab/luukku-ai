@@ -591,7 +591,15 @@ export default function Home() {
                                 return (
                                   <tr key={i} className="border-b border-gray-50 last:border-0">
                                     <td className="py-3 pr-3 text-sm text-gray-600">{r.planned_year ?? "—"}</td>
-                                    <td className="py-3 pr-3 text-sm font-medium text-gray-800">{r.type}</td>
+                                    <td className="py-3 pr-3 text-sm font-medium text-gray-800">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{r.type}</span>
+                                        {r.evidence && (
+                                          <span title={`Lähde: "${r.evidence}"`}
+                                            className="text-gray-400 hover:text-gray-600 cursor-help text-xs shrink-0" aria-label="Näytä lähde">ⓘ</span>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td className="py-3 pr-3">
                                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${confBadge}`}>
                                         {CONFIDENCE_FI[r.confidence] ?? r.confidence}
@@ -616,15 +624,32 @@ export default function Home() {
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Tehdyt</p>
                           <table className="w-full">
                             <tbody>
-                              {knownRenovations.map((r, i) => (
-                                <tr key={i} className="border-b border-gray-50 last:border-0">
-                                  <td className="py-2.5 pr-3 text-sm text-gray-600 w-12">{r.year ?? "—"}</td>
-                                  <td className="py-2.5 text-sm text-gray-700">{r.type}</td>
-                                  <td className="py-2.5 text-right">
-                                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Tehty</span>
-                                  </td>
-                                </tr>
-                              ))}
+                              {knownRenovations.map((r, i) => {
+                                const lowConf = r.extraction_confidence !== null && r.extraction_confidence !== undefined && r.extraction_confidence < 0.7;
+                                return (
+                                  <tr key={i} className="border-b border-gray-50 last:border-0">
+                                    <td className="py-2.5 pr-3 text-sm text-gray-600 w-12">{r.year ?? "—"}</td>
+                                    <td className="py-2.5 text-sm text-gray-700">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{r.type}</span>
+                                        {lowConf && (
+                                          <span title="AI on epävarma tästä merkinnästä — tarkista alkuperäisestä dokumentista"
+                                            className="text-amber-500 cursor-help" aria-label="Epävarma tieto">⚠</span>
+                                        )}
+                                        {r.evidence && (
+                                          <span title={`Lähde: "${r.evidence}"`}
+                                            className="text-gray-400 hover:text-gray-600 cursor-help text-xs" aria-label="Näytä lähde">ⓘ</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-2.5 text-right">
+                                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${lowConf ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>
+                                        {lowConf ? "Tarkista" : "Tehty"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </>

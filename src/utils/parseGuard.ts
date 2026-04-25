@@ -79,8 +79,19 @@ export function ensureSchema(data: unknown): RawExtractedFields {
 
 // Ensures the raw LLM output from Pass 2 has a safe, typed shape
 export interface RawRepairsFields {
-  last_major_renovations: Array<{ type: string; year: number | null }>;
-  upcoming_repairs: Array<{ type: string; planned_year: number | null; confidence: "high" | "medium" | "low" }>;
+  last_major_renovations: Array<{
+    type: string;
+    year: number | null;
+    evidence: string | null;
+    extraction_confidence: number | null;
+  }>;
+  upcoming_repairs: Array<{
+    type: string;
+    planned_year: number | null;
+    confidence: "high" | "medium" | "low";
+    evidence: string | null;
+    extraction_confidence: number | null;
+  }>;
 }
 
 const VALID_CONFIDENCE = new Set(["high", "medium", "low"]);
@@ -95,7 +106,12 @@ export function ensureRepairsSchema(data: unknown): RawRepairsFields {
   const lastMajor = Array.isArray(d?.last_major_renovations)
     ? (d.last_major_renovations as unknown[])
         .filter((x): x is Record<string, unknown> => x !== null && typeof x === "object")
-        .map((x) => ({ type: str(x.type) ?? "tuntematon", year: num(x.year) }))
+        .map((x) => ({
+          type: str(x.type) ?? "tuntematon",
+          year: num(x.year),
+          evidence: str(x.evidence),
+          extraction_confidence: num(x.extraction_confidence),
+        }))
     : [];
 
   const upcoming = Array.isArray(d?.upcoming_repairs)
@@ -105,6 +121,8 @@ export function ensureRepairsSchema(data: unknown): RawRepairsFields {
           type: str(x.type) ?? "tuntematon",
           planned_year: num(x.planned_year),
           confidence: coerceConfidence(x.confidence),
+          evidence: str(x.evidence),
+          extraction_confidence: num(x.extraction_confidence),
         }))
     : [];
 
