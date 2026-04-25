@@ -5,7 +5,7 @@ import { extractHousingData } from "@/src/services/llmExtractor";
 import { validateHousingData } from "@/src/services/validationService";
 import { getLocationData } from "@/src/services/mmlService";
 import { getAreaPricing } from "@/src/services/statsService";
-import { computeAnalysis } from "@/src/services/scoringService";
+import { computeAnalysis, estimateRepairCost } from "@/src/services/scoringService";
 import { computeConfidence } from "@/src/services/confidenceService";
 import { classifyRepairs } from "@/src/services/repairClassificationService";
 import { mergeHousingData } from "@/src/services/mergeService";
@@ -130,7 +130,10 @@ export async function POST(req: NextRequest) {
       confidence: analysis.confidence,
       factors: analysis.scoring_factors,
       red_flags: analysis.red_flags,
-      upcoming_repairs: data.repairs.upcoming,
+      upcoming_repairs: data.repairs.upcoming.map((r) => ({
+        ...r,
+        cost_estimate_eur: estimateRepairCost(r.type, data.building.size_m2),
+      })),
       extracted: {
         apartment_size_m2: data.building.size_m2,
         building_year: data.building.year,

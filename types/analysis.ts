@@ -7,6 +7,7 @@ export interface UpcomingRepair {
   type: string;
   planned_year: number | null;
   confidence: "high" | "medium" | "low";
+  cost_estimate_eur?: number | null;
 }
 
 export interface RedFlag {

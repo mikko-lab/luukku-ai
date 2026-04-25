@@ -48,7 +48,7 @@ const REPAIR_COST_FLAT: Record<string, number> = {
   parkkihalli: 7_000,
 };
 
-function estimateRepairCost(type: string, size_m2: number | null): number {
+export function estimateRepairCost(type: string, size_m2: number | null): number {
   const t = type.toLowerCase();
   for (const [key, costPerM2] of Object.entries(REPAIR_COST_PER_M2)) {
     if (t.includes(key)) {

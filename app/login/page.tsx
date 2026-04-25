@@ -45,10 +45,9 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2.5 mb-8">
-          <img src="/logo-mark.svg" alt="" width="28" height="28" />
+        <div className="mb-8">
           <span className="text-lg font-black tracking-tight text-gray-900">
-            Luukku<span className="text-blue-600">-AI</span>
+            Luukku<span className="text-apple-blue">-AI</span>
           </span>
         </div>
 
@@ -110,7 +109,7 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             aria-busy={loading}
-            className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="w-full py-2.5 rounded-xl bg-apple-blue text-white font-semibold text-sm hover:bg-apple-blueh disabled:opacity-50 transition-colors"
           >
             {loading ? "Hetki…" : mode === "login" ? "Kirjaudu" : "Luo tili"}
           </button>
@@ -120,7 +119,7 @@ export default function LoginPage() {
           {mode === "login" ? "Ei tiliä vielä?" : "Onko sinulla jo tili?"}{" "}
           <button
             onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
-            className="text-blue-600 hover:underline font-medium"
+            className="text-apple-blue hover:underline font-medium"
           >
             {mode === "login" ? "Rekisteröidy" : "Kirjaudu"}
           </button>
