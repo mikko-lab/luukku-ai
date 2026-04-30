@@ -289,20 +289,21 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
   // ── Population trend ──────────────────────────────────────────────────
   const pop = data.population;
   if (pop.trend_5y !== null) {
+    const src = "Lähde: Tilastokeskus StatFin, 2019–2024";
     if (pop.trend_5y < -10) {
-      factors.push({ label: "Vakava muuttotappioalue", impact: 3, reason: `${pop.municipality}: väestö laskenut ${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankit voivat kieltäytyä asuntolainasta` });
+      factors.push({ label: "Vakava muuttotappioalue", impact: 3, reason: `${pop.municipality}: -${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankit voivat kieltäytyä asuntolainasta. ${src}` });
       score += 3;
     } else if (pop.trend_5y < -5) {
-      factors.push({ label: "Muuttotappioalue", impact: 2, reason: `${pop.municipality}: väestö laskenut ${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankin lainaehdot voivat olla tiukemmat` });
+      factors.push({ label: "Muuttotappioalue", impact: 2, reason: `${pop.municipality}: -${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankin lainaehdot voivat olla tiukemmat. ${src}` });
       score += 2;
     } else if (pop.trend_5y < -2) {
-      factors.push({ label: "Väestö vähenee", impact: 1, reason: `${pop.municipality}: ${pop.trend_5y.toFixed(1)}% (5v)` });
+      factors.push({ label: "Väestö vähenee", impact: 1, reason: `${pop.municipality}: -${Math.abs(pop.trend_5y).toFixed(1)}% (5v). ${src}` });
       score += 1;
     } else if (pop.trend_5y < 0) {
-      factors.push({ label: "Lievä väestölasku", impact: 0.5, reason: `${pop.municipality}: ${pop.trend_5y.toFixed(1)}% (5v)` });
+      factors.push({ label: "Lievä väestölasku", impact: 0.5, reason: `${pop.municipality}: -${Math.abs(pop.trend_5y).toFixed(1)}% (5v). ${src}` });
       score += 0.5;
     } else if (pop.trend_5y > 2) {
-      factors.push({ label: "Kasvava alue", impact: -0.5, reason: `${pop.municipality}: +${pop.trend_5y.toFixed(1)}% (5v)` });
+      factors.push({ label: "Kasvava alue", impact: -0.5, reason: `${pop.municipality}: +${pop.trend_5y.toFixed(1)}% (5v). ${src}` });
       score -= 0.5;
     }
   }

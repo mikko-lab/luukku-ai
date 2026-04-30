@@ -58,6 +58,44 @@ const POPULATION_TREND: Record<string, number> = {
   suomussalmi: -13.5,
   viitasaari: -9.8,
   aanekoski: -4.1,
+  // Pohjois-Pohjanmaa
+  oulainen: -7.7,
+  nivala: -4.9,
+  kalajoki: -2.1,
+  alavieska: -8.3,
+  sievi: -1.4,
+  merijarvi: -9.1,
+  // Keski-Suomi
+  saarijarvi: -6.8,
+  // Pohjanmaa / Etelä-Pohjanmaa
+  alajarvi: -5.3,
+  vimpeli: -7.2,
+  evijarvi: -8.9,
+  lappajarvi: -9.4,
+  // Satakunta
+  ulvila: 0.8,
+  kankaanpaa: -5.6,
+  kokemaki: -6.1,
+  // Pirkanmaa
+  virrat: -8.4,
+  mantta: -5.9,
+  // Kymenlaakso
+  hamina: -3.2,
+  // Pohjois-Karjala
+  kitee: -6.7,
+  tohmajärvi: -8.2,
+  // Lappi
+  tornio: -2.8,
+  kemijarvi: -11.4,
+  sodankyla: -4.6,
+  // Kainuu
+  sotkamo: -3.1,
+  // Etelä-Savo
+  juva: -7.9,
+  kangasniemi: -9.3,
+  // Häme
+  nastola: -1.8,
+  orimattila: -1.2,
 };
 
 function normalize(city: string): string {
