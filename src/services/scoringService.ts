@@ -322,8 +322,7 @@ function computeMonthlyCost(data: HousingData): number {
 
   const base =
     (f.maintenance_fee_monthly ?? 200) +
-    (f.financing_fee_monthly ?? 0) +
-    (data.land.ground_rent_monthly ?? 0);
+    (f.financing_fee_monthly ?? 0);
 
   // Only amortize major and unknown upcoming repairs — minor repairs are noise
   // repairWeight is for risk scoring only, not cost multiplication
