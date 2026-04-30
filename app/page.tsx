@@ -533,8 +533,6 @@ export default function Home() {
                         ["Pinta-ala", result.extracted.apartment_size_m2 ? `${result.extracted.apartment_size_m2} m²` : null],
                         ["Energialuokka", result.extracted.energy_class ?? null],
                         ["Lämmitys", result.extracted.heating_system ?? null],
-                        ["Hoitovastike", result.extracted.maintenance_fee_monthly ? `${result.extracted.maintenance_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
-                        ["Rahoitusvastike", result.extracted.financing_fee_monthly ? `${result.extracted.financing_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
                       ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => {
                         const isEnergyClass = label === "Energialuokka";
                         const ec = String(value);
@@ -555,10 +553,12 @@ export default function Home() {
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8888A4] mb-2">Talous</p>
                       {([
+                        ["Hoitovastike", result.extracted.maintenance_fee_monthly ? `${result.extracted.maintenance_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
+                        ["Rahoitusvastike", result.extracted.financing_fee_monthly ? `${result.extracted.financing_fee_monthly.toLocaleString("fi-FI")} €/kk` : null],
                         ["Laina/osake", result.extracted.loan_per_share ? `${result.extracted.loan_per_share.toLocaleString("fi-FI")} €` : null],
                         ["Yhtiölaina yht.", result.extracted.housing_company_debt_total ? `${result.extracted.housing_company_debt_total.toLocaleString("fi-FI")} €` : null],
                         ["Korjausrahasto", result.extracted.repair_fund ? `${result.extracted.repair_fund.toLocaleString("fi-FI")} €` : null],
-                        ["Tonttivuokra", result.extracted.ground_rent_monthly ? `${result.extracted.ground_rent_monthly.toLocaleString("fi-FI")} €/kk` : null],
+                        ["Yhtiön tonttivuokra", result.extracted.ground_rent_monthly ? `${result.extracted.ground_rent_monthly.toLocaleString("fi-FI")} €/kk` : null],
                         ["Tontti", result.extracted.owns_land === true ? "Oma tontti" : result.extracted.owns_land === false ? `Vuokratontti${result.extracted.lease_end_year ? ` (päättyy ${result.extracted.lease_end_year})` : ""}` : null],
                         ["Arvioitu kk-kulu", `${result.monthly_cost.toLocaleString("fi-FI")} €/kk`],
                       ] as [string, unknown][]).filter(([, v]) => v != null).map(([label, value]) => (
