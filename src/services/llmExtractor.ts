@@ -37,9 +37,10 @@ Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike/Pääoma
 Yhtiölaina/osuus=loan_per_share, Velka/m2=loan_per_m2, Rakennusvuosi=building_year,
 Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
 FEE TABLE FORMAT: In isännöitsijäntodistus, fees are often in a table with columns: Määrä | Kerroin | À-hinta EUR | Yhteensä EUR.
-- apartment_size_m2: comes from the apartment description section (huoneiston tiedot), NOT from fee tables. A number followed by m² in the À-hinta column is a UNIT RATE (€/m²), never apartment size.
-- maintenance_fee_monthly / financing_fee_monthly: use the Yhteensä EUR column as the total monthly fee for this apartment.
-- Määrä in a fee table row is the quantity (shares or m²), not a standalone apartment size.
+- apartment_size_m2: comes from the apartment description section (huoneiston tiedot / pinta-ala), NOT from fee tables. A value like 5,30 m² or 8,00 m² in the À-hinta column is a UNIT RATE (euros per m² or per unit), never the apartment size.
+- maintenance_fee_monthly: prefer the Yhteensä EUR value on the Hoitovastike row. If Yhteensä is not available, compute À-hinta × Määrä yourself. Hoitovastike variants (Hoitovastike varasto, Hoitovastike autopaikka) should be summed together.
+- financing_fee_monthly (Rahoitusvastike / Pääomavastike): same rule — prefer Yhteensä EUR, fall back to À-hinta × Määrä.
+- apartment_share_count: the Määrä value on a fee row is the share/unit count for this apartment — extract it to help with fee calculations.
 Land: "oma tontti"/"yhtiö omistaa tontin"→owns_land=true, "vuokratontti"/"maanvuokra"→owns_land=false.
 lease_end_year: the year the land lease (maanvuokrasopimus/tonttivuokrasopimus) expires — extract the exact year.
 ground_rent_monthly: monthly ground rent in euros (tonttivuokra €/kk or annual ÷ 12).
@@ -99,7 +100,7 @@ ${text.slice(0, 10000)}`
 
   // Unit correction: if fee looks like a per-share or per-m² rate instead of total monthly cost,
   // try to recover by multiplying. Finnish hoitovastike is never below ~50€/kk for any apartment.
-  const MIN_PLAUSIBLE_FEE = 50;
+  const MIN_PLAUSIBLE_FEE = 30;
   for (const field of ["maintenance_fee_monthly", "financing_fee_monthly"] as const) {
     const fee = safe[field];
     if (fee === null) continue;
