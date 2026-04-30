@@ -286,6 +286,27 @@ function computeRiskScore(data: HousingData): { score: number; factors: ScoringF
     score += 0.5;
   }
 
+  // ── Population trend ──────────────────────────────────────────────────
+  const pop = data.population;
+  if (pop.trend_5y !== null) {
+    if (pop.trend_5y < -10) {
+      factors.push({ label: "Vakava muuttotappioalue", impact: 3, reason: `${pop.municipality}: väestö laskenut ${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankit voivat kieltäytyä asuntolainasta` });
+      score += 3;
+    } else if (pop.trend_5y < -5) {
+      factors.push({ label: "Muuttotappioalue", impact: 2, reason: `${pop.municipality}: väestö laskenut ${Math.abs(pop.trend_5y).toFixed(1)}% (5v) — pankin lainaehdot voivat olla tiukemmat` });
+      score += 2;
+    } else if (pop.trend_5y < -2) {
+      factors.push({ label: "Väestö vähenee", impact: 1, reason: `${pop.municipality}: ${pop.trend_5y.toFixed(1)}% (5v)` });
+      score += 1;
+    } else if (pop.trend_5y < 0) {
+      factors.push({ label: "Lievä väestölasku", impact: 0.5, reason: `${pop.municipality}: ${pop.trend_5y.toFixed(1)}% (5v)` });
+      score += 0.5;
+    } else if (pop.trend_5y > 2) {
+      factors.push({ label: "Kasvava alue", impact: -0.5, reason: `${pop.municipality}: +${pop.trend_5y.toFixed(1)}% (5v)` });
+      score -= 0.5;
+    }
+  }
+
   const clampedScore = Math.round(Math.max(0, Math.min(10, score)) * 10) / 10;
   return { score: clampedScore, factors };
 }

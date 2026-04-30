@@ -269,6 +269,7 @@ export async function extractHousingData(text: string): Promise<HousingData> {
       avg_price_m2: null,
       deviation_percent: null,
     },
+    population: { trend_5y: null, is_declining: null, municipality: null },
     land: {
       owns_land: raw.owns_land,
       ground_rent_monthly: raw.ground_rent_monthly,

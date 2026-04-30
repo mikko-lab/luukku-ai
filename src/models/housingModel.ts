@@ -56,6 +56,12 @@ export interface LandData {
   lease_end_year: number | null;
 }
 
+export interface PopulationData {
+  trend_5y: number | null;         // % väestönmuutos 5 vuodessa (negatiivinen = vähenevä)
+  is_declining: boolean | null;    // true jos lasku > 2%
+  municipality: string | null;
+}
+
 export interface HousingData {
   location: LocationData;
   financials: FinancialData;
@@ -63,6 +69,7 @@ export interface HousingData {
   repairs: RepairData;
   market: MarketData;
   land: LandData;
+  population: PopulationData;
 }
 
 export interface ScoringFactor {

@@ -79,6 +79,7 @@ export function mergeHousingData(primary: HousingData, secondary: HousingData): 
       avg_price_m2:      primary.market.avg_price_m2      ?? secondary.market.avg_price_m2,
       deviation_percent: primary.market.deviation_percent ?? secondary.market.deviation_percent,
     },
+    population: { trend_5y: null, is_declining: null, municipality: null },
     land: {
       owns_land:            primary.land.owns_land            ?? secondary.land.owns_land,
       ground_rent_monthly:  primary.land.ground_rent_monthly  ?? secondary.land.ground_rent_monthly,

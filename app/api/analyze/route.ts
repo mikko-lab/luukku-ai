@@ -5,6 +5,7 @@ import { extractHousingData } from "@/src/services/llmExtractor";
 import { validateHousingData } from "@/src/services/validationService";
 import { getLocationData } from "@/src/services/mmlService";
 import { getAreaPricing } from "@/src/services/statsService";
+import { getPopulationData } from "@/src/services/populationService";
 import { computeAnalysis, estimateRepairCost } from "@/src/services/scoringService";
 import { computeConfidence } from "@/src/services/confidenceService";
 import { classifyRepairs } from "@/src/services/repairClassificationService";
@@ -68,17 +69,19 @@ export async function POST(req: NextRequest) {
     // 5b. Classify repairs (major / minor / unknown)
     data = classifyRepairs(data);
 
-    // 6. Enrich: location + market (run in parallel, timeout-guarded)
+    // 6. Enrich: location + market + population (run in parallel, timeout-guarded)
     log(SERVICE, "Enriching with external data...");
-    const [enrichedLocation, enrichedMarket] = await Promise.all([
+    const [enrichedLocation, enrichedMarket, enrichedPopulation] = await Promise.all([
       withTimeout(getLocationData(data), 1000, "mml"),
       withTimeout(getAreaPricing(data), 1000, "stats"),
+      withTimeout(getPopulationData(data), 1000, "population"),
     ]);
 
     data = {
       ...data,
       location: enrichedLocation?.location ?? data.location,
       market: enrichedMarket?.market ?? data.market,
+      population: enrichedPopulation?.population ?? data.population,
     };
 
     // 7. Confidence
