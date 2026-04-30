@@ -33,9 +33,13 @@ async function callClaude(system: string, prompt: string): Promise<unknown> {
 
 const PASS1_SYSTEM = `You extract real estate data from Finnish housing documents.
 Return ONLY valid JSON, no markdown, no explanation.
-Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike=financing_fee_monthly,
+Finnish synonyms: Hoitovastike=maintenance_fee_monthly, Rahoitusvastike/Pääomavastike=financing_fee_monthly,
 Yhtiölaina/osuus=loan_per_share, Velka/m2=loan_per_m2, Rakennusvuosi=building_year,
 Asuinpinta-ala=apartment_size_m2, Korjausrahasto=repair_fund.
+FEE TABLE FORMAT: In isännöitsijäntodistus, fees are often in a table with columns: Määrä | Kerroin | À-hinta EUR | Yhteensä EUR.
+- apartment_size_m2: comes from the apartment description section (huoneiston tiedot), NOT from fee tables. A number followed by m² in the À-hinta column is a UNIT RATE (€/m²), never apartment size.
+- maintenance_fee_monthly / financing_fee_monthly: use the Yhteensä EUR column as the total monthly fee for this apartment.
+- Määrä in a fee table row is the quantity (shares or m²), not a standalone apartment size.
 Land: "oma tontti"/"yhtiö omistaa tontin"→owns_land=true, "vuokratontti"/"maanvuokra"→owns_land=false.
 lease_end_year: the year the land lease (maanvuokrasopimus/tonttivuokrasopimus) expires — extract the exact year.
 ground_rent_monthly: monthly ground rent in euros (tonttivuokra €/kk or annual ÷ 12).
@@ -61,7 +65,7 @@ Return ONLY JSON:
 - loan_per_m2 (number|null)
 - apartment_share_count (number|null) — number of shares (osakkeiden lukumäärä) owned by this apartment
 - building_year (number|null)
-- apartment_size_m2 (number|null)
+- apartment_size_m2 (number|null) — from apartment description section only; NEVER from the fee table À-hinta column
 - housing_company_debt_total (number|null)
 - repair_fund (number|null)
 - city (string|null)
