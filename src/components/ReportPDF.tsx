@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 9,
-    color: "#6B7280",
+    color: "#00E5CC",
     letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 4,

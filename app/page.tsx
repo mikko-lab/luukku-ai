@@ -497,9 +497,9 @@ export default function Home() {
                   disabled={!canAnalyze || state === "loading"}
                   aria-busy={state === "loading"}
                   style={canAnalyze && state !== "loading" ? { boxShadow: "0 0 24px rgba(0,229,204,0.30)" } : undefined}
-                  className="w-full py-3.5 rounded-xl font-bold text-base transition-all
-                    bg-[#00E5CC] text-[#0A0A0F] hover:bg-[#00f5da] active:scale-[0.98]
-                    disabled:opacity-25 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 rounded-xl font-extrabold text-base transition-all
+                    bg-[#00E5CC] text-black hover:bg-[#00f5da] active:scale-[0.98]
+                    disabled:bg-[#1E2035] disabled:text-[#4B4B6A] disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {state === "loading" ? (
                     <span className="flex items-center justify-center gap-2">
