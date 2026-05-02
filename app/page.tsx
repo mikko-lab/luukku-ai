@@ -719,7 +719,7 @@ export default function Home() {
 
                 {/* Paywall overlay wraps everything below score card */}
                 <div className="relative">
-                  <div className={!unlocked ? "blur-sm pointer-events-none select-none" : ""}>
+                  <div className={!unlocked ? "blur-[2px] pointer-events-none select-none opacity-60" : ""}>
 
                 {/* Risk factors */}
                 {nonZeroFactors.length > 0 && (
@@ -783,15 +783,8 @@ export default function Home() {
 
                   {/* Paywall overlay */}
                   {!unlocked && (
-                    <div className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center z-10 p-6 text-center"
-                      style={{ background: "linear-gradient(to bottom, rgba(10,10,15,0.5) 0%, rgba(10,10,15,0.92) 40%)" }}>
-                      <div className="w-12 h-12 rounded-full bg-[#00E5CC]/10 border border-[#00E5CC]/30 flex items-center justify-center mb-4">
-                        <svg className="w-5 h-5 text-[#00E5CC]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                        </svg>
-                      </div>
-                      <p className="text-white font-bold text-lg mb-1">Avaa täysi analyysi</p>
-                      <p className="text-[#8888A4] text-sm mb-5 leading-relaxed">Riskitekijät, korjaustarpeet<br />ja luotettavuusarvio</p>
+                    <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl z-10 px-6 pb-6 pt-16 text-center"
+                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.97) 35%)" }}>
                       <a
                         href={STRIPE_LINK}
                         style={{ boxShadow: "0 0 24px rgba(0,229,204,0.30)" }}
@@ -799,7 +792,7 @@ export default function Home() {
                       >
                         Näytä raportti — 14,90 €
                       </a>
-                      <p className="text-[10px] text-[#8888A4] mt-3">Kertamaksu · Ei tilausta · Maksu Stripelläkin</p>
+                      <p className="text-[10px] text-[#8888A4] mt-3">Kertamaksu · Ei tilausta · Stripe-maksu</p>
                     </div>
                   )}
                 </div>{/* end relative paywall wrapper */}
