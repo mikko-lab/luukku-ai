@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { AnalysisResult, UpcomingRepair } from "@/types/analysis";
 import Image from "next/image";
 
 type AppState = "idle" | "loading" | "done" | "error";
+
+const STRIPE_LINK = "https://buy.stripe.com/PLACEHOLDER";
 
 const CONFIDENCE_FI: Record<string, string> = {
   high: "varma", medium: "epävarma", low: "alustava",
@@ -302,9 +304,25 @@ export default function Home() {
   const [showAllFactors, setShowAllFactors] = useState(false);
   const [analysisTime, setAnalysisTime] = useState<number | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<number>(0);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paid") === "1") {
+      const saved = sessionStorage.getItem("luukku_result");
+      if (saved) {
+        try {
+          setResult(JSON.parse(saved));
+          setState("done");
+          setUnlocked(true);
+          window.history.replaceState({}, "", "/");
+        } catch {}
+      }
+    }
+  }, []);
 
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
   const knownRenovations = result?.extracted.last_major_renovations?.filter((r) => r.type !== "other") ?? [];
@@ -340,8 +358,10 @@ export default function Home() {
       const res = await fetch("/api/analyze", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analyysi epäonnistui");
+      sessionStorage.setItem("luukku_result", JSON.stringify(data));
       setResult(data);
       setState("done");
+      setUnlocked(false);
       setAnalysisTime(Math.round((Date.now() - startRef.current) / 100) / 10);
       setTimeout(() => resultsRef.current?.focus(), 100);
     } catch (err) {
@@ -697,6 +717,10 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Paywall overlay wraps everything below score card */}
+                <div className="relative">
+                  <div className={!unlocked ? "blur-sm pointer-events-none select-none" : ""}>
+
                 {/* Risk factors */}
                 {nonZeroFactors.length > 0 && (
                   <div className="bg-[#0F0F1A] rounded-2xl border border-[#1E2035] p-6">
@@ -754,6 +778,31 @@ export default function Home() {
                   Lataa raportti (PDF)
                 </button>
                 <CopyButton result={result} file2={!!file2} />
+
+                  </div>{/* end blur content */}
+
+                  {/* Paywall overlay */}
+                  {!unlocked && (
+                    <div className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center z-10 p-6 text-center"
+                      style={{ background: "linear-gradient(to bottom, rgba(10,10,15,0.5) 0%, rgba(10,10,15,0.92) 40%)" }}>
+                      <div className="w-12 h-12 rounded-full bg-[#00E5CC]/10 border border-[#00E5CC]/30 flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-[#00E5CC]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                      </div>
+                      <p className="text-white font-bold text-lg mb-1">Avaa täysi analyysi</p>
+                      <p className="text-[#8888A4] text-sm mb-5 leading-relaxed">Riskitekijät, korjaustarpeet<br />ja luotettavuusarvio</p>
+                      <a
+                        href={STRIPE_LINK}
+                        style={{ boxShadow: "0 0 24px rgba(0,229,204,0.30)" }}
+                        className="w-full py-3 rounded-xl bg-[#00E5CC] text-[#0A0A0F] font-bold text-sm text-center hover:bg-[#00f5da] transition-colors block"
+                      >
+                        Näytä raportti — 14,90 €
+                      </a>
+                      <p className="text-[10px] text-[#8888A4] mt-3">Kertamaksu · Ei tilausta · Maksu Stripelläkin</p>
+                    </div>
+                  )}
+                </div>{/* end relative paywall wrapper */}
               </>
             ) : (
               <>
