@@ -498,7 +498,7 @@ export default function Home() {
                   aria-busy={state === "loading"}
                   style={canAnalyze && state !== "loading" ? { boxShadow: "0 0 24px rgba(0,229,204,0.30)" } : undefined}
                   className="w-full py-3.5 rounded-xl font-extrabold text-base transition-all
-                    bg-[#00E5CC] text-black hover:bg-[#00f5da] active:scale-[0.98]
+                    bg-[#00E5CC] text-white hover:bg-[#00f5da] active:scale-[0.98]
                     disabled:bg-[#1E2035] disabled:text-[#4B4B6A] disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {state === "loading" ? (
@@ -699,7 +699,7 @@ export default function Home() {
                 {/* Score card */}
                 <div className="bg-[#0F0F1A] rounded-2xl border border-[#1E2035] p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">Analyysi valmis</span>
+                    <span className="text-xs font-semibold text-[#00E5CC] bg-[#00E5CC]/10 px-2.5 py-1 rounded-full">Analyysi valmis</span>
                     <span className="text-[10px] text-[#8888A4]">
                       {new Date().toLocaleDateString("fi-FI")}{analysisTime ? ` · ${analysisTime} s` : ""}
                     </span>

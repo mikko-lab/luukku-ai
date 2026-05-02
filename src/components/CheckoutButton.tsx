@@ -41,7 +41,7 @@ export default function CheckoutButton({ analysisData }: CheckoutButtonProps) {
       <button
         onClick={() => setStep('email')}
         style={{ boxShadow: '0 0 24px rgba(0,229,204,0.30)' }}
-        className="w-full py-3 rounded-xl bg-[#00E5CC] text-[#0A0A0F] font-bold text-sm hover:bg-[#00f5da] transition-colors"
+        className="w-full py-3 rounded-xl bg-[#00E5CC] text-white font-bold text-sm hover:bg-[#00f5da] transition-colors"
       >
         Näytä raportti — 14,90 €
       </button>
@@ -50,7 +50,7 @@ export default function CheckoutButton({ analysisData }: CheckoutButtonProps) {
 
   if (step === 'loading') {
     return (
-      <button disabled className="w-full py-3 rounded-xl bg-[#00E5CC] text-[#0A0A0F] font-bold text-sm opacity-50 cursor-not-allowed">
+      <button disabled className="w-full py-3 rounded-xl bg-[#00E5CC] text-white font-bold text-sm opacity-50 cursor-not-allowed">
         Siirrytään maksupalveluun…
       </button>
     )
@@ -72,7 +72,7 @@ export default function CheckoutButton({ analysisData }: CheckoutButtonProps) {
       <button
         onClick={handleCheckout}
         style={{ boxShadow: '0 0 24px rgba(0,229,204,0.30)' }}
-        className="w-full py-3 rounded-xl bg-[#00E5CC] text-[#0A0A0F] font-bold text-sm hover:bg-[#00f5da] transition-colors"
+        className="w-full py-3 rounded-xl bg-[#00E5CC] text-white font-bold text-sm hover:bg-[#00f5da] transition-colors"
       >
         Jatka maksuun →
       </button>
