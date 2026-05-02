@@ -828,9 +828,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-[#1E2035] px-8 py-5 text-center">
         <p className="text-xs text-[#8888A4]">
-          <a href="#" className="hover:text-white transition-colors underline underline-offset-2">Tietosuojaseloste</a>
+          <a href="/tietosuoja.html" className="hover:text-white transition-colors underline underline-offset-2">Tietosuojaseloste</a>
           {" · "}
-          <a href="#" className="hover:text-white transition-colors underline underline-offset-2">Käyttöehdot</a>
+          <a href="/kayttoehdot.html" className="hover:text-white transition-colors underline underline-offset-2">Käyttöehdot</a>
         </p>
       </footer>
 
