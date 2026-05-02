@@ -381,8 +381,11 @@ function generateRedFlags(data: HousingData, factors: ScoringFactor[]): string[]
 /*  Main export                                                          */
 /* ------------------------------------------------------------------ */
 
-function getVerdict(score: number): AnalysisOutput["verdict"] {
-  if (score >= 8) return "ÄLÄ OSTA";
+function getVerdict(score: number, confidence: number): AnalysisOutput["verdict"] {
+  if (score >= 8) {
+    // Low-confidence data can't justify the harshest verdict
+    return confidence < 0.4 ? "HARKITSE TARKKAAN" : "ÄLÄ OSTA";
+  }
   if (score >= 6) return "HARKITSE TARKKAAN";
   return "HYVÄ KOHDE";
 }
@@ -404,7 +407,7 @@ export function computeAnalysis(data: HousingData, confidence: number): Analysis
     factors: scoring_factors.map((f) => `${f.impact > 0 ? "+" : ""}${f.impact} ${f.label}`),
   });
 
-  const verdict = getVerdict(risk_score);
+  const verdict = getVerdict(risk_score, confidence);
 
   return { verdict, risk_score, monthly_cost, market_position, confidence, red_flags, scoring_factors };
 }
