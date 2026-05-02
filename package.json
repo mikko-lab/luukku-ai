@@ -19,7 +19,9 @@
     "pdf-parse": "^1.1.1",
     "prisma": "^5.22.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "resend": "^6.12.2",
+    "stripe": "^22.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

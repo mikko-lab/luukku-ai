@@ -3,10 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { AnalysisResult, UpcomingRepair } from "@/types/analysis";
 import Image from "next/image";
+import CheckoutButton from "@/src/components/CheckoutButton";
 
 type AppState = "idle" | "loading" | "done" | "error";
-
-const STRIPE_LINK = "https://buy.stripe.com/PLACEHOLDER";
 
 const CONFIDENCE_FI: Record<string, string> = {
   high: "varma", medium: "epävarma", low: "alustava",
@@ -304,7 +303,7 @@ export default function Home() {
   const [showAllFactors, setShowAllFactors] = useState(false);
   const [analysisTime, setAnalysisTime] = useState<number | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<number>(0);
@@ -312,15 +311,8 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("paid") === "1") {
-      const saved = sessionStorage.getItem("luukku_result");
-      if (saved) {
-        try {
-          setResult(JSON.parse(saved));
-          setState("done");
-          setUnlocked(true);
-          window.history.replaceState({}, "", "/");
-        } catch {}
-      }
+      setShowSuccessBanner(true);
+      window.history.replaceState({}, "", "/");
     }
   }, []);
 
@@ -358,10 +350,8 @@ export default function Home() {
       const res = await fetch("/api/analyze", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analyysi epäonnistui");
-      sessionStorage.setItem("luukku_result", JSON.stringify(data));
       setResult(data);
       setState("done");
-      setUnlocked(false);
       setAnalysisTime(Math.round((Date.now() - startRef.current) / 100) / 10);
       setTimeout(() => resultsRef.current?.focus(), 100);
     } catch (err) {
@@ -438,6 +428,15 @@ export default function Home() {
           <p className="text-xs text-[#8888A4]">Live</p>
         </div>
       </header>
+
+      {showSuccessBanner && (
+        <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-6 py-3 text-center">
+          <p className="text-sm text-emerald-400 font-medium">
+            Maksu onnistui — raportti lähetetään sähköpostiisi pian.
+            <button onClick={() => setShowSuccessBanner(false)} className="ml-3 text-emerald-400/60 hover:text-emerald-400 text-xs">✕</button>
+          </p>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-6">
 
@@ -719,7 +718,7 @@ export default function Home() {
 
                 {/* Paywall overlay wraps everything below score card */}
                 <div className="relative">
-                  <div className={!unlocked ? "blur-[2px] pointer-events-none select-none opacity-60" : ""}>
+                  <div className="blur-[2px] pointer-events-none select-none opacity-60">
 
                 {/* Risk factors */}
                 {nonZeroFactors.length > 0 && (
@@ -782,19 +781,11 @@ export default function Home() {
                   </div>{/* end blur content */}
 
                   {/* Paywall overlay */}
-                  {!unlocked && (
-                    <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl z-10 px-6 pb-6 pt-16 text-center"
-                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.97) 35%)" }}>
-                      <a
-                        href={STRIPE_LINK}
-                        style={{ boxShadow: "0 0 24px rgba(0,229,204,0.30)" }}
-                        className="w-full py-3 rounded-xl bg-[#00E5CC] text-[#0A0A0F] font-bold text-sm text-center hover:bg-[#00f5da] transition-colors block"
-                      >
-                        Näytä raportti — 14,90 €
-                      </a>
-                      <p className="text-[10px] text-[#8888A4] mt-3">Kertamaksu · Ei tilausta · Stripe-maksu</p>
-                    </div>
-                  )}
+                  <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl z-10 px-6 pb-6 pt-16"
+                    style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.97) 35%)" }}>
+                    <CheckoutButton analysisData={result} />
+                    <p className="text-[10px] text-[#8888A4] mt-3 text-center">Kertamaksu · Ei tilausta · Stripe-maksu</p>
+                  </div>
                 </div>{/* end relative paywall wrapper */}
               </>
             ) : (

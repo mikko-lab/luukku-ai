@@ -20,5 +20,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/analyze"],
+  matcher: [
+    "/analyysit",
+    "/kohteet",
+    "/raportit",
+    "/asetukset",
+    "/ohjeet",
+  ],
 };
