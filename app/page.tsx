@@ -410,15 +410,8 @@ export default function Home() {
     >
       {/* Header */}
       <header className="border-b border-[#1E2035] px-8 py-4 flex items-center justify-between sticky top-0 bg-[#0A0A0F]/90 backdrop-blur-sm z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#00E5CC]/10 border border-[#00E5CC]/30 flex items-center justify-center shrink-0">
-            <svg className="w-4 h-4 text-[#00E5CC]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-            </svg>
-          </div>
-          <span className="font-black tracking-tight text-sm">
-            Luukku<span className="text-[#00E5CC]">-AI</span>
-          </span>
+        <div className="flex items-center">
+          <Image src="/luukku-ai-logo.png" alt="Luukku-AI" height={32} width={108} className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-2">
           <span className="relative flex h-1.5 w-1.5">
@@ -498,8 +491,8 @@ export default function Home() {
                   aria-busy={state === "loading"}
                   style={canAnalyze && state !== "loading" ? { boxShadow: "0 0 24px rgba(0,229,204,0.30)" } : undefined}
                   className="w-full py-3.5 rounded-xl font-extrabold text-base transition-all
-                    bg-[#00E5CC] text-white hover:bg-[#00f5da] active:scale-[0.98]
-                    disabled:bg-[#1E2035] disabled:text-[#4B4B6A] disabled:cursor-not-allowed disabled:shadow-none"
+                    bg-[#00E5CC] text-[#0A0A0F] hover:bg-[#00f5da] active:scale-[0.98]
+                    disabled:bg-[#00E5CC]/40 disabled:cursor-not-allowed"
                 >
                   {state === "loading" ? (
                     <span className="flex items-center justify-center gap-2">
@@ -802,7 +795,7 @@ export default function Home() {
                       Suurenna →
                     </span>
                   </div>
-                  <div className="relative">
+                  <div className="relative overflow-hidden" style={{ clipPath: 'inset(0 0 10% 0)' }}>
                     <Image
                       src="/raportti-esimerkki.jpg"
                       alt="Esimerkki Luukku-AI-raportista"
@@ -811,6 +804,9 @@ export default function Home() {
                       className="w-full h-auto"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F1A]/60 via-transparent to-transparent" />
+                    <div className="absolute top-2.5 right-3">
+                      <Image src="/luukku-ai-logo.png" alt="Luukku-AI" height={22} width={74} className="h-[22px] w-auto" />
+                    </div>
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-[#0A0A0F]/90 border border-[#1E2035] rounded-xl px-4 py-2 text-sm text-white font-semibold backdrop-blur-sm">
                         Klikkaa suurentaaksesi
@@ -846,13 +842,12 @@ export default function Home() {
           >
             Sulje ✕
           </button>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/raportti-esimerkki.jpg"
             alt="Esimerkki Luukku-AI-raportista"
-            width={900}
-            height={1200}
             className="max-h-[90vh] w-auto rounded-xl"
-            style={{ boxShadow: "0 0 60px rgba(0,229,204,0.15)" }}
+            style={{ boxShadow: "0 0 60px rgba(0,229,204,0.15)", clipPath: 'inset(0 0 10% 0 round 12px)' }}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
