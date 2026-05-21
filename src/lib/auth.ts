@@ -1,19 +1,24 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "dev-secret-change-me");
 const COOKIE = "session";
+
+function getSecret(): Uint8Array {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET is required");
+  return new TextEncoder().encode(s);
+}
 
 export async function signToken(userId: string): Promise<string> {
   return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(SECRET);
+    .sign(getSecret());
 }
 
 export async function verifyToken(token: string): Promise<{ userId: string } | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
     return { userId: payload.userId as string };
   } catch {
     return null;

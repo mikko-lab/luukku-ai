@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "dev-secret-change-me");
+function getSecret(): Uint8Array {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET is required");
+  return new TextEncoder().encode(s);
+}
 
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get("session")?.value;
@@ -12,7 +16,7 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, SECRET);
+    await jwtVerify(token, getSecret());
     return NextResponse.next();
   } catch {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -26,5 +30,7 @@ export const config = {
     "/raportit",
     "/asetukset",
     "/ohjeet",
+    "/api/analyze",
+    "/api/report",
   ],
 };

@@ -12,6 +12,8 @@ import { classifyRepairs } from "@/src/services/repairClassificationService";
 import { mergeHousingData } from "@/src/services/mergeService";
 import { withTimeout } from "@/src/utils/withTimeout";
 import { log, logError } from "@/src/utils/logger";
+import { getSession } from "@/src/lib/auth";
+import { db } from "@/src/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,6 +23,19 @@ const SERVICE = "route/analyze";
 export async function POST(req: NextRequest) {
   const requestId = Math.random().toString(36).slice(2, 8);
   log(SERVICE, `=== New analysis request [${requestId}] ===`);
+
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Kirjaudu sisään" }, { status: 401 });
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { credits_remaining: true },
+  });
+  if (!user || user.credits_remaining < 1) {
+    return NextResponse.json({ error: "Ei analyysikredittejä jäljellä" }, { status: 402 });
+  }
 
   try {
     // 1. File validation
@@ -92,7 +107,22 @@ export async function POST(req: NextRequest) {
 
     log(SERVICE, `=== Request [${requestId}] complete — risk: ${analysis.risk_score}/10, confidence: ${confidence.percent}% ===`);
 
-    // 9. Return API response
+    // 9. Deduct credit and log usage atomically
+    await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: session.userId },
+        data: { credits_remaining: { decrement: 1 } },
+      });
+      await tx.analysisLog.create({
+        data: {
+          user_id: session.userId,
+          request_id: requestId,
+          risk_score: analysis.risk_score,
+        },
+      });
+    });
+
+    // 10. Return API response
     return NextResponse.json({
       verdict: analysis.verdict,
       risk_score: analysis.risk_score,
