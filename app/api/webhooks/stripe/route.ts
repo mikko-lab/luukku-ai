@@ -3,11 +3,13 @@ import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { consumeAnalysis } from '@/src/services/analysisStore'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-04-22.dahlia',
-})
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
+}
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY!)
+}
 
 async function generatePdfBuffer(analysisData: unknown): Promise<Buffer> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://luukkuai.win'
@@ -31,6 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Stripe-signature puuttuu' }, { status: 400 })
   }
 
+  const stripe = getStripe()
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!)
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
     try {
       const pdfBuffer = await generatePdfBuffer(analysisData)
 
-      await resend.emails.send({
+      await getResend().emails.send({
         from: 'Luukku AI <raportti@luukkuai.win>',
         to: customerEmail!,
         subject: 'Asuntoanalyysiraporttisi on valmis',
