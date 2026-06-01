@@ -17,7 +17,7 @@ cd luukku-ai
 npm install
 cp .env.example .env.local
 # täytä .env.local omilla arvoillasi
-npx prisma migrate deploy
+npx prisma db push   # synkronoi skeema paikalliseen DB:hen
 npm run dev
 ```
 
@@ -62,8 +62,9 @@ Avaa Issue otsikolla `[feat]: ominaisuuden nimi`.
 ## Tärkeää
 
 - Älä koskaan commitoi `.db`-tiedostoja tai `.env.local`-tiedostoa
-- `DATABASE_URL` tulee aina osoittaa absoluuttiseen polkuun
-- Uudet Prisma-skeemamuutokset tehdään migraatioina: `npx prisma migrate dev --name kuvaus`
+- Skeemamuutos tehdään muokkaamalla `prisma/schema.prisma` ja ajamalla
+  `npx prisma db push`. Projektissa ei ole `prisma/migrations/`-kansiota,
+  joten `migrate dev` / `migrate deploy` eivät ole käytössä.
 
 ## Lisenssi
 

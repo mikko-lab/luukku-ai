@@ -35,8 +35,10 @@ PDF upload
 - **Next.js 15** App Router, TypeScript
 - **Anthropic Claude Haiku** (`claude-haiku-4-5`) — LLM-ekstraktio
 - **pdf-parse** — PDF-tekstin purku
-- **Prisma + SQLite** — käyttäjähallinta ja analyysien kirjaus
+- **Prisma + PostgreSQL** — käyttäjähallinta ja analyysien kirjaus
 - **bcryptjs + JWT** — autentikaatio, evästepohjaiset sessiot
+- **Stripe** — kertamaksu PDF-raportista
+- **Resend** — sähköpostitoimitus maksun jälkeen
 - **PM2 + Nginx** — tuotantodeploy Hetzner VPS:llä
 
 ## Käynnistys
@@ -46,22 +48,44 @@ cp .env.example .env.local
 # täydennä muuttujat .env.local-tiedostoon
 
 npm install
-npx prisma migrate deploy   # luo SQLite-tietokannan
+npx prisma db push    # synkronoi skeema DB:hen (luo/päivittää taulut)
 npm run dev
 ```
 
 Avaa http://localhost:3000
 
+> **Skeemamuutokset:** projektissa ei ole `prisma/migrations/`-kansiota
+> — `prisma db push` on kanonin komento sekä paikallisesti että prodia
+> vasten. Aja se uudelleen skeemamuutoksen jälkeen.
+
 ## Ympäristömuuttujat
+
+Pakolliset:
 
 | Muuttuja | Kuvaus |
 |---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API-avain |
-| `DATABASE_URL` | Prisma SQLite-polku, esim. `file:/absoluuttinen/polku/prod.db` |
+| `DATABASE_URL` | Postgres connection string |
+| `DATABASE_URL_DIRECT` | Postgres connection ilman pgbouncer-poolia (Prisma migraatioille) |
 | `JWT_SECRET` | Vähintään 32-merkkinen satunnainen merkkijono sessiolle |
-| `COOKIE_SECURE` | `true` HTTPS-tuotannossa, `false` HTTP:llä |
 
-> **Huom DATABASE_URL:** käytä absoluuttista polkua — Prisma CLI ja Next.js runtime ratkaisevat suhteelliset polut eri hakemistoista.
+Stripe-maksu + email (vaaditaan tuotannossa):
+
+| Muuttuja | Kuvaus |
+|---|---|
+| `STRIPE_SECRET_KEY` | `sk_test_…` dev:ssä, `sk_live_…` prodissa |
+| `STRIPE_WEBHOOK_SECRET` | Stripe-webhook-allekirjoituksen salasana |
+| `RESEND_API_KEY` | Resend API -avain PDF-raportin emailiin |
+| `NEXT_PUBLIC_BASE_URL` | Sovelluksen julkinen URL (Stripe success/cancel URL) |
+
+Valinnaiset:
+
+| Muuttuja | Kuvaus |
+|---|---|
+| `COOKIE_SECURE` | `true` HTTPS-tuotannossa, `false` HTTP:llä |
+| `UPSTASH_REDIS_REST_URL` | Rate-limit (Upstash). Ei pakollinen — ratelimit ohitetaan jos puuttuu |
+| `UPSTASH_REDIS_REST_TOKEN` | Pari `UPSTASH_REDIS_REST_URL`:lle |
+| `ADMIN_KEY` | `x-admin-key`-header `/api/admin/add-credits` -reitille |
 
 ## Riskilogiikka
 
