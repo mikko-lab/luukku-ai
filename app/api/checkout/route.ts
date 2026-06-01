@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { storeAnalysis } from '@/src/services/analysisStore'
+import { getSession } from '@/src/lib/auth'
+import { db } from '@/src/lib/db'
+
+export const runtime = 'nodejs'
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -10,19 +13,55 @@ function getStripe() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { analysisData, email } = body as { analysisData: unknown; email?: string }
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Kirjaudu sisään' }, { status: 401 })
+    }
 
-    if (!analysisData) {
-      return NextResponse.json({ error: 'analysisData puuttuu' }, { status: 400 })
+    const body = await req.json()
+    const { analysisId, email, brokerLogo } = body as {
+      analysisId?: string
+      email?: string
+      brokerLogo?: string
+    }
+
+    if (!analysisId) {
+      return NextResponse.json({ error: 'analysisId puuttuu' }, { status: 400 })
+    }
+    if (!email) {
+      return NextResponse.json({ error: 'email vaaditaan' }, { status: 400 })
+    }
+
+    const analysis = await db.analysisLog.findUnique({
+      where: { id: analysisId },
+      select: { id: true, user_id: true, paid: true },
+    })
+    if (!analysis || analysis.user_id !== session.userId) {
+      return NextResponse.json({ error: 'Analyysiä ei löydy' }, { status: 404 })
+    }
+    if (analysis.paid) {
+      return NextResponse.json({ error: 'Tämä raportti on jo maksettu' }, { status: 409 })
+    }
+
+    // Persist the broker logo (if any) onto the row before redirecting to
+    // Stripe — the webhook renders the PDF entirely from the DB row.
+    if (typeof brokerLogo === 'string' && brokerLogo.length > 0) {
+      await db.analysisLog.update({
+        where: { id: analysisId },
+        data: { broker_logo: brokerLogo },
+      })
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://luukkuai.win'
 
-    const session = await getStripe().checkout.sessions.create({
+    const checkout = await getStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
-      customer_email: email || undefined,
+      customer_email: email,
+      metadata: {
+        analysisId,
+        userId: session.userId,
+      },
       line_items: [
         {
           price_data: {
@@ -36,13 +75,11 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/?paid=1`,
-      cancel_url: `${baseUrl}/`,
+      success_url: `${baseUrl}/?paid=1&analysis=${analysisId}`,
+      cancel_url: `${baseUrl}/?canceled=1`,
     })
 
-    storeAnalysis(session.id, analysisData)
-
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: checkout.url })
   } catch (err) {
     console.error('[checkout]', err)
     return NextResponse.json({ error: 'Checkout epäonnistui' }, { status: 500 })
