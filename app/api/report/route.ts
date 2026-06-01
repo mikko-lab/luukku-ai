@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import type { AnalysisResult } from "@/types/analysis";
 import { getSession } from "@/src/lib/auth";
 import { getReportRatelimit } from "@/src/lib/ratelimit";
+import { renderReportPdf } from "@/src/services/reportRenderer";
+import { db } from "@/src/lib/db";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    // Middleware already 401s unauthenticated requests, but we read the
-    // session here to key the rate limiter per user.
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Kirjaudu sisään" }, { status: 401 });
@@ -25,25 +25,51 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { result, address, brokerLogo } = await req.json() as {
-      result: AnalysisResult;
-      address: string;
-      brokerLogo?: string;
-    };
+    const { analysisId } = (await req.json()) as { analysisId?: string };
+    if (!analysisId) {
+      return NextResponse.json({ error: "analysisId puuttuu" }, { status: 400 });
+    }
 
-    // Dynamic import avoids SSR issues
-    const { renderToBuffer } = await import("@react-pdf/renderer");
-    const { createElement } = await import("react");
-    const { ReportPDF } = await import("@/src/components/ReportPDF");
+    const analysis = await db.analysisLog.findUnique({
+      where: { id: analysisId },
+      select: {
+        id: true,
+        user_id: true,
+        paid: true,
+        address: true,
+        broker_logo: true,
+        result_json: true,
+      },
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const element = createElement(ReportPDF as any, { result, address, brokerLogo });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buffer = await renderToBuffer(element as any);
+    // Same 404 for missing and not-owned so we don't reveal which
+    // analysisIds exist for other users.
+    if (!analysis || analysis.user_id !== session.userId) {
+      return NextResponse.json({ error: "Analyysiä ei löydy" }, { status: 404 });
+    }
+    if (!analysis.paid) {
+      return NextResponse.json(
+        { error: "Raporttia ei ole maksettu" },
+        { status: 402 },
+      );
+    }
+    if (!analysis.result_json) {
+      return NextResponse.json(
+        { error: "Analyysin data puuttuu" },
+        { status: 500 },
+      );
+    }
 
-    const filename = `luukku-analyysi-${(address || "kohde").replace(/\s+/g, "-").toLowerCase()}.pdf`;
+    const address = analysis.address ?? "Kohde";
+    const buffer = await renderReportPdf({
+      result: analysis.result_json as unknown as AnalysisResult,
+      address,
+      brokerLogo: analysis.broker_logo ?? undefined,
+    });
 
-    return new NextResponse(new Uint8Array(buffer), {
+    const filename = `luukku-analyysi-${address.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+
+    return new NextResponse(Buffer.from(buffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
