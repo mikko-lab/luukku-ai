@@ -27,5 +27,6 @@ export const config = {
     "/ohjeet",
     "/api/analyze",
     "/api/report",
+    "/api/analysis/:id",
   ],
 };
