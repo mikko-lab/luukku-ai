@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AnalysisResult } from "@/types/analysis";
+import { getSession } from "@/src/lib/auth";
+import { getReportRatelimit } from "@/src/lib/ratelimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+    // Middleware already 401s unauthenticated requests, but we read the
+    // session here to key the rate limiter per user.
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Kirjaudu sisään" }, { status: 401 });
+    }
+
+    const rl = getReportRatelimit();
+    if (rl) {
+      const { success } = await rl.limit(`report:${session.userId}`);
+      if (!success) {
+        return NextResponse.json(
+          { error: "Liian monta pyyntöä, odota hetki" },
+          { status: 429 },
+        );
+      }
+    }
+
     const { result, address, brokerLogo } = await req.json() as {
       result: AnalysisResult;
       address: string;

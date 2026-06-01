@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 
 let authRl: Ratelimit | null = null;
 let analyzeRl: Ratelimit | null = null;
+let reportRl: Ratelimit | null = null;
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -34,6 +35,18 @@ export function getAnalyzeRatelimit(): Ratelimit | null {
     prefix: "luukku:analyze",
   });
   return analyzeRl;
+}
+
+export function getReportRatelimit(): Ratelimit | null {
+  if (reportRl) return reportRl;
+  const redis = getRedis();
+  if (!redis) return null;
+  reportRl = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    prefix: "luukku:report",
+  });
+  return reportRl;
 }
 
 export function getClientIp(req: NextRequest): string {
