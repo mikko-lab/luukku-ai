@@ -3,12 +3,13 @@
 import { useState } from 'react'
 
 interface CheckoutButtonProps {
-  analysisData: unknown
+  analysisId: string
+  brokerLogo?: string
 }
 
 type Step = 'idle' | 'email' | 'loading' | 'error'
 
-export default function CheckoutButton({ analysisData }: CheckoutButtonProps) {
+export default function CheckoutButton({ analysisId, brokerLogo }: CheckoutButtonProps) {
   const [step, setStep] = useState<Step>('idle')
   const [email, setEmail] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -24,7 +25,7 @@ export default function CheckoutButton({ analysisData }: CheckoutButtonProps) {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisData, email }),
+        body: JSON.stringify({ analysisId, email, brokerLogo }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Tuntematon virhe')

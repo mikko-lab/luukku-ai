@@ -296,6 +296,8 @@ function InfoPanel() {
 export default function Home() {
   const [state, setState] = useState<AppState>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
@@ -304,16 +306,57 @@ export default function Home() {
   const [analysisTime, setAnalysisTime] = useState<number | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<number>(0);
 
+  // Stripe redirects back to /?paid=1&analysis=<id>. Rehydrate the analysis
+  // from the DB and poll for paid=true if the webhook hasn't fired yet.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("paid") === "1") {
-      setShowSuccessBanner(true);
-      window.history.replaceState({}, "", "/");
+    const paidParam = params.get("paid");
+    const idParam = params.get("analysis");
+    if (paidParam !== "1" || !idParam) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    const intervalMs = 1000;
+
+    setPendingPayment(true);
+    window.history.replaceState({}, "", "/");
+
+    async function hydrate() {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts += 1;
+        try {
+          const res = await fetch(`/api/analysis/${idParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (cancelled) return;
+            if (data.result) setResult(data.result);
+            if (data.broker_logo) setBrokerLogo(data.broker_logo);
+            setAnalysisId(data.analysisId);
+            setState("done");
+            if (data.paid) {
+              setPaid(true);
+              setShowSuccessBanner(true);
+              setPendingPayment(false);
+              return;
+            }
+          }
+        } catch {
+          // network blip — fall through to retry
+        }
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+      if (!cancelled) setPendingPayment(false);
     }
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const knownRepairs = result?.upcoming_repairs.filter((r) => r.type !== "other") ?? [];
@@ -328,10 +371,12 @@ export default function Home() {
   }
 
   async function downloadReport() {
-    if (!result) return;
-    const address = result.extracted.apartment_size_m2
-      ? `${result.extracted.building_year ?? ""} · ${result.extracted.apartment_size_m2} m²` : "Kohde";
-    const res = await fetch("/api/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ result, address, brokerLogo }) });
+    if (!analysisId || !paid) return;
+    const res = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ analysisId }),
+    });
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -342,6 +387,7 @@ export default function Home() {
   async function analyze() {
     if (!file1) return;
     setState("loading"); setError(null); setShowAllFactors(false);
+    setPaid(false); setAnalysisId(null);
     startRef.current = Date.now();
     const form = new FormData();
     form.append("file", file1);
@@ -351,6 +397,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analyysi epäonnistui");
       setResult(data);
+      setAnalysisId(data.analysisId ?? null);
       setState("done");
       setAnalysisTime(Math.round((Date.now() - startRef.current) / 100) / 10);
       setTimeout(() => resultsRef.current?.focus(), 100);
@@ -363,6 +410,7 @@ export default function Home() {
   function reset() {
     setState("idle"); setResult(null); setFile1(null); setFile2(null);
     setError(null); setAnalysisTime(null); setShowAllFactors(false);
+    setAnalysisId(null); setPaid(false);
   }
 
   const verdictColor = !result ? "" :
@@ -512,7 +560,7 @@ export default function Home() {
                 </div>
               )}
 
-              {isDone && (
+              {isDone && paid && (
                 <div className="mt-4 flex justify-end">
                   <button onClick={downloadReport}
                     className="text-xs font-semibold text-[#00E5CC] hover:underline underline-offset-2">
@@ -711,7 +759,7 @@ export default function Home() {
 
                 {/* Paywall overlay wraps everything below score card */}
                 <div className="relative">
-                  <div className="blur-[2px] pointer-events-none select-none opacity-60">
+                  <div className={paid ? "" : "blur-[2px] pointer-events-none select-none opacity-60"}>
 
                 {/* Risk factors */}
                 {nonZeroFactors.length > 0 && (
@@ -773,12 +821,23 @@ export default function Home() {
 
                   </div>{/* end blur content */}
 
-                  {/* Paywall overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl z-10 px-6 pb-6 pt-16"
-                    style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.97) 35%)" }}>
-                    <CheckoutButton analysisData={result} />
-                    <p className="text-[10px] text-[#8888A4] mt-3 text-center">Kertamaksu · Ei tilausta · Stripe-maksu</p>
-                  </div>
+                  {/* Paywall overlay — visible only while not yet paid */}
+                  {!paid && (
+                    <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl z-10 px-6 pb-6 pt-16"
+                      style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.97) 35%)" }}>
+                      {pendingPayment ? (
+                        <div className="text-center">
+                          <p className="text-sm text-[#00E5CC] font-semibold">Käsitellään maksua…</p>
+                          <p className="text-[11px] text-[#8888A4] mt-2">Älä sulje välilehteä. Raportti aukeaa hetken kuluttua.</p>
+                        </div>
+                      ) : analysisId ? (
+                        <>
+                          <CheckoutButton analysisId={analysisId} brokerLogo={brokerLogo ?? undefined} />
+                          <p className="text-[10px] text-[#8888A4] mt-3 text-center">Kertamaksu · Ei tilausta · Stripe-maksu</p>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </div>{/* end relative paywall wrapper */}
               </>
             ) : (
