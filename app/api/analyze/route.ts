@@ -15,6 +15,9 @@ import { log, logError } from "@/src/utils/logger";
 import { getSession } from "@/src/lib/auth";
 import { db } from "@/src/lib/db";
 import { getAnalyzeRatelimit } from "@/src/lib/ratelimit";
+import { buildReportAddress } from "@/src/services/reportRenderer";
+import type { AnalysisResult } from "@/types/analysis";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -125,18 +128,7 @@ export async function POST(req: NextRequest) {
 
     log(SERVICE, `=== Request [${requestId}] complete — risk: ${analysis.risk_score}/10, confidence: ${confidence.percent}% ===`);
 
-    // Credit was already reserved before the Claude call; just log the
-    // successful analysis here.
-    await db.analysisLog.create({
-      data: {
-        user_id: session.userId,
-        request_id: requestId,
-        risk_score: analysis.risk_score,
-      },
-    });
-
-    // Return API response
-    return NextResponse.json({
+    const response: AnalysisResult = {
       verdict: analysis.verdict,
       risk_score: analysis.risk_score,
       monthly_cost: analysis.monthly_cost,
@@ -169,7 +161,22 @@ export async function POST(req: NextRequest) {
         confidence_level: confidence.level,
         missing_fields: confidence.missing_fields,
       },
+    };
+
+    // Credit was already reserved before the Claude call; here we persist
+    // the full result so the paywall webhook and PDF endpoints can look it
+    // up by analysisId later without depending on client-supplied data.
+    const logRow = await db.analysisLog.create({
+      data: {
+        user_id: session.userId,
+        request_id: requestId,
+        risk_score: analysis.risk_score,
+        address: buildReportAddress(response),
+        result_json: response as unknown as Prisma.InputJsonValue,
+      },
     });
+
+    return NextResponse.json({ ...response, analysisId: logRow.id });
   } catch (err) {
     logError(SERVICE, `Request [${requestId}] failed`, err);
     // Refund the reserved credit since the analysis didn't complete.
