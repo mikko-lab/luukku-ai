@@ -19,12 +19,20 @@ model User {
 }
 
 model AnalysisLog {
-  id         String   @id @default(cuid())
-  user_id    String
-  created_at DateTime @default(now())
-  address    String?
-  risk_score Float?
-  request_id String?  @unique
+  id                String    @id @default(cuid())
+  user_id           String
+  created_at        DateTime  @default(now())
+  address           String?
+  risk_score        Float?
+  request_id        String?   @unique
+  result_json       Json?
+  broker_logo       String?
+  paid              Boolean   @default(false)
+  paid_at           DateTime?
+  stripe_session_id String?   @unique
+  emailed_at        DateTime?
 
   user User @relation(fields: [user_id], references: [id])
+
+  @@index([user_id, created_at])
 }
