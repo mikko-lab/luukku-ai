@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-
-function getSecret(): Uint8Array {
-  const s = process.env.JWT_SECRET;
-  if (!s) throw new Error("JWT_SECRET is required");
-  return new TextEncoder().encode(s);
-}
+import { getJwtSecret } from "@/src/lib/jwtSecret";
 
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get("session")?.value;
@@ -16,7 +11,7 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, getSecret());
+    await jwtVerify(token, getJwtSecret());
     return NextResponse.next();
   } catch {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
