@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { AnalysisResult } from "@/types/analysis";
-import { getSession } from "@/src/lib/auth";
-import { getReportRatelimit } from "@/src/lib/ratelimit";
+import { getReportRatelimit, getClientIp } from "@/src/lib/ratelimit";
 import { renderReportPdf } from "@/src/services/reportRenderer";
 import { db } from "@/src/lib/db";
 
@@ -9,14 +8,10 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Kirjaudu sisään" }, { status: 401 });
-    }
-
+    const ip = getClientIp(req);
     const rl = getReportRatelimit();
     if (rl) {
-      const { success } = await rl.limit(`report:${session.userId}`);
+      const { success } = await rl.limit(`report:${ip}`);
       if (!success) {
         return NextResponse.json(
           { error: "Liian monta pyyntöä, odota hetki" },
@@ -25,16 +20,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { analysisId } = (await req.json()) as { analysisId?: string };
-    if (!analysisId) {
-      return NextResponse.json({ error: "analysisId puuttuu" }, { status: 400 });
+    const { stripe_session_id } = (await req.json()) as {
+      stripe_session_id?: string;
+    };
+    if (!stripe_session_id) {
+      return NextResponse.json(
+        { error: "stripe_session_id puuttuu" },
+        { status: 400 },
+      );
     }
 
+    // stripe_session_id is the access token. Only the buyer who completed
+    // the Stripe checkout has it (Stripe sets it on the success_url
+    // redirect). Without it the row is unreachable.
     const analysis = await db.analysisLog.findUnique({
-      where: { id: analysisId },
+      where: { stripe_session_id },
       select: {
-        id: true,
-        user_id: true,
         paid: true,
         address: true,
         broker_logo: true,
@@ -42,12 +43,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Same 404 for missing and not-owned so we don't reveal which
-    // analysisIds exist for other users.
-    if (!analysis || analysis.user_id !== session.userId) {
-      return NextResponse.json({ error: "Analyysiä ei löydy" }, { status: 404 });
+    if (!analysis) {
+      return NextResponse.json({ error: "Raporttia ei löydy" }, { status: 404 });
     }
     if (!analysis.paid) {
+      // Should not normally happen — stripe_session_id is set on the row
+      // only at the same moment paid flips to true. Return 402 anyway as
+      // a defensive measure if someone hits the route before the webhook.
       return NextResponse.json(
         { error: "Raporttia ei ole maksettu" },
         { status: 402 },
