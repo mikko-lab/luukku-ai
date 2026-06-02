@@ -12,9 +12,8 @@ import { classifyRepairs } from "@/src/services/repairClassificationService";
 import { mergeHousingData } from "@/src/services/mergeService";
 import { withTimeout } from "@/src/utils/withTimeout";
 import { log, logError } from "@/src/utils/logger";
-import { getSession } from "@/src/lib/auth";
 import { db } from "@/src/lib/db";
-import { getAnalyzeRatelimit } from "@/src/lib/ratelimit";
+import { getAnalyzeRatelimit, getClientIp } from "@/src/lib/ratelimit";
 import { buildReportAddress } from "@/src/services/reportRenderer";
 import type { AnalysisResult } from "@/types/analysis";
 import type { Prisma } from "@prisma/client";
@@ -28,14 +27,12 @@ export async function POST(req: NextRequest) {
   const requestId = Math.random().toString(36).slice(2, 8);
   log(SERVICE, `=== New analysis request [${requestId}] ===`);
 
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Kirjaudu sisään" }, { status: 401 });
-  }
-
+  // Per-IP rate limit. Without accounts there's no credit budget to gate
+  // Claude calls, so this is the only abuse brake.
+  const ip = getClientIp(req);
   const rl = getAnalyzeRatelimit();
   if (rl) {
-    const { success } = await rl.limit(`analyze:${session.userId}`);
+    const { success } = await rl.limit(`analyze:${ip}`);
     if (!success) {
       return NextResponse.json(
         { error: "Liian monta pyyntöä, odota hetki" },
@@ -44,8 +41,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // File validation — must happen before charging, so a malformed upload
-  // doesn't burn a credit.
   const formData = await req.formData();
   const file = formData.get("file");
 
@@ -62,33 +57,16 @@ export async function POST(req: NextRequest) {
   const file2 = formData.get("file2");
   const hasSecondFile = file2 instanceof File && file2.size > 0;
 
-  // Atomic credit reservation BEFORE any paid Claude call. updateMany with
-  // a WHERE guard is a single SQL statement, so concurrent requests cannot
-  // both observe credits_remaining=1 and both proceed.
-  const reserved = await db.user.updateMany({
-    where: { id: session.userId, credits_remaining: { gt: 0 } },
-    data: { credits_remaining: { decrement: 1 } },
-  });
-  if (reserved.count === 0) {
-    return NextResponse.json(
-      { error: "Ei analyysikredittejä jäljellä" },
-      { status: 402 },
-    );
-  }
-
   try {
     log(SERVICE, `File: ${file.name} (${Math.round(file.size / 1024)} KB)`);
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Extract from primary file
     const rawText = await extractPdfText(buffer);
     const text = normalizeText(rawText);
     log(SERVICE, "Normalizing text...");
 
-    // 4. LLM extraction — primary
     let data = await extractHousingData(text);
 
-    // 4b. Extract from secondary file and merge
     if (hasSecondFile) {
       log(SERVICE, `Second file: ${file2.name} (${Math.round(file2.size / 1024)} KB)`);
       const buffer2 = Buffer.from(await file2.arrayBuffer());
@@ -99,13 +77,9 @@ export async function POST(req: NextRequest) {
       log(SERVICE, "Documents merged");
     }
 
-    // 5. Validate
     data = validateHousingData(data);
-
-    // 5b. Classify repairs (major / minor / unknown)
     data = classifyRepairs(data);
 
-    // 6. Enrich: location + market + population (run in parallel, timeout-guarded)
     log(SERVICE, "Enriching with external data...");
     const [enrichedLocation, enrichedMarket, enrichedPopulation] = await Promise.all([
       withTimeout(getLocationData(data), 1000, "mml"),
@@ -120,10 +94,7 @@ export async function POST(req: NextRequest) {
       population: enrichedPopulation?.population ?? data.population,
     };
 
-    // 7. Confidence
     const confidence = computeConfidence(data);
-
-    // 8. Score
     const analysis = computeAnalysis(data, confidence.score);
 
     log(SERVICE, `=== Request [${requestId}] complete — risk: ${analysis.risk_score}/10, confidence: ${confidence.percent}% ===`);
@@ -163,12 +134,8 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // Credit was already reserved before the Claude call; here we persist
-    // the full result so the paywall webhook and PDF endpoints can look it
-    // up by analysisId later without depending on client-supplied data.
     const logRow = await db.analysisLog.create({
       data: {
-        user_id: session.userId,
         request_id: requestId,
         risk_score: analysis.risk_score,
         address: buildReportAddress(response),
@@ -179,16 +146,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...response, analysisId: logRow.id });
   } catch (err) {
     logError(SERVICE, `Request [${requestId}] failed`, err);
-    // Refund the reserved credit since the analysis didn't complete.
-    // Best-effort; we still return 500 to the client either way.
-    try {
-      await db.user.update({
-        where: { id: session.userId },
-        data: { credits_remaining: { increment: 1 } },
-      });
-    } catch (refundErr) {
-      logError(SERVICE, `Credit refund failed for [${requestId}]`, refundErr);
-    }
     const message = err instanceof Error ? err.message : "Analysis failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
