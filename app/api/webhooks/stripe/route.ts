@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       address: true,
       broker_logo: true,
       result_json: true,
+      email: true,
     },
   })
 
@@ -83,7 +84,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   }
 
-  const recipient = session.customer_details?.email ?? session.customer_email
+  // Recipient resolution order:
+  //   1. Stripe's reported address (collected at checkout time)
+  //   2. The email we persisted on /api/checkout (forward-looking fix
+  //      for the case where Stripe leaves both fields blank — does
+  //      happen on partial test events).
+  const recipient =
+    session.customer_details?.email ?? session.customer_email ?? row.email
   if (!recipient) {
     console.error(`[webhook] Ei vastaanottaja-emailia sessiolle ${session.id}`)
     return NextResponse.json({ received: true })
@@ -101,6 +108,9 @@ export async function POST(req: NextRequest) {
       brokerLogo: row.broker_logo ?? undefined,
     })
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://luukkuai.win'
+    const downloadUrl = `${baseUrl}/?paid=1&session_id=${encodeURIComponent(session.id)}`
+
     // Idempotency-Key tied to analysisId means Resend itself dedupes
     // duplicate send attempts: parallel webhook invocations (race
     // between the paid-flip read and the emailed_at gate) and retries
@@ -117,6 +127,9 @@ export async function POST(req: NextRequest) {
           <p>Hei,</p>
           <p>Kiitos tilauksestasi! Täydellinen asuntoanalyysi on liitteenä.</p>
           <p>Raportti sisältää riskipisteytyksen, remonttihistorian, talousanalyysin ja punaiset liput.</p>
+          <p>Tarvitsetko liitteen uudelleen? Avaa raportti suoraan tästä linkistä:</p>
+          <p><a href="${downloadUrl}">${downloadUrl}</a></p>
+          <p>Linkki on henkilökohtainen — pidä se omana tietonasi.</p>
           <p>— Luukku AI</p>
         `,
         attachments: [{ filename: 'asuntoanalyysi.pdf', content: Buffer.from(pdf) }],
