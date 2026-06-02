@@ -101,18 +101,28 @@ export async function POST(req: NextRequest) {
       brokerLogo: row.broker_logo ?? undefined,
     })
 
-    await getResend().emails.send({
-      from: 'Luukku AI <raportti@luukkuai.win>',
-      to: recipient,
-      subject: 'Asuntoanalyysiraporttisi on valmis',
-      html: `
-        <p>Hei,</p>
-        <p>Kiitos tilauksestasi! Täydellinen asuntoanalyysi on liitteenä.</p>
-        <p>Raportti sisältää riskipisteytyksen, remonttihistorian, talousanalyysin ja punaiset liput.</p>
-        <p>— Luukku AI</p>
-      `,
-      attachments: [{ filename: 'asuntoanalyysi.pdf', content: Buffer.from(pdf) }],
-    })
+    // Idempotency-Key tied to analysisId means Resend itself dedupes
+    // duplicate send attempts: parallel webhook invocations (race
+    // between the paid-flip read and the emailed_at gate) and retries
+    // triggered after the email succeeded but the emailed_at DB write
+    // failed both resolve to the same key. Resend returns the cached
+    // first-attempt response on a duplicate or refuses with
+    // concurrent_idempotent_requests if the first is still in flight.
+    await getResend().emails.send(
+      {
+        from: 'Luukku AI <raportti@luukkuai.win>',
+        to: recipient,
+        subject: 'Asuntoanalyysiraporttisi on valmis',
+        html: `
+          <p>Hei,</p>
+          <p>Kiitos tilauksestasi! Täydellinen asuntoanalyysi on liitteenä.</p>
+          <p>Raportti sisältää riskipisteytyksen, remonttihistorian, talousanalyysin ja punaiset liput.</p>
+          <p>— Luukku AI</p>
+        `,
+        attachments: [{ filename: 'asuntoanalyysi.pdf', content: Buffer.from(pdf) }],
+      },
+      { idempotencyKey: `analysis:${analysisId}` },
+    )
 
     await db.analysisLog.update({
       where: { id: analysisId },
