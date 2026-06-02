@@ -298,6 +298,7 @@ export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
+  const [stripeSessionId, setStripeSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
@@ -311,13 +312,15 @@ export default function Home() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<number>(0);
 
-  // Stripe redirects back to /?paid=1&analysis=<id>. Rehydrate the analysis
-  // from the DB and poll for paid=true if the webhook hasn't fired yet.
+  // Stripe redirects back to /?paid=1&session_id=cs_... — poll
+  // /api/checkout-status by stripe_session_id until the webhook has
+  // flipped paid=true. 404 from the endpoint means "still processing"
+  // (the row is unfindable by session_id until the webhook lands).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paidParam = params.get("paid");
-    const idParam = params.get("analysis");
-    if (paidParam !== "1" || !idParam) return;
+    const sidParam = params.get("session_id");
+    if (paidParam !== "1" || !sidParam) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -325,19 +328,21 @@ export default function Home() {
     const intervalMs = 1000;
 
     setPendingPayment(true);
+    setStripeSessionId(sidParam);
     window.history.replaceState({}, "", "/");
 
     async function hydrate() {
       while (!cancelled && attempts < maxAttempts) {
         attempts += 1;
         try {
-          const res = await fetch(`/api/analysis/${idParam}`);
+          const res = await fetch(
+            `/api/checkout-status?session_id=${encodeURIComponent(sidParam!)}`,
+          );
           if (res.ok) {
             const data = await res.json();
             if (cancelled) return;
             if (data.result) setResult(data.result);
             if (data.broker_logo) setBrokerLogo(data.broker_logo);
-            setAnalysisId(data.analysisId);
             setState("done");
             if (data.paid) {
               setPaid(true);
@@ -346,6 +351,7 @@ export default function Home() {
               return;
             }
           }
+          // res.ok===false (404 etc.) = webhook hasn't landed yet, keep polling.
         } catch {
           // network blip — fall through to retry
         }
@@ -371,11 +377,11 @@ export default function Home() {
   }
 
   async function downloadReport() {
-    if (!analysisId || !paid) return;
+    if (!stripeSessionId || !paid) return;
     const res = await fetch("/api/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ analysisId }),
+      body: JSON.stringify({ stripe_session_id: stripeSessionId }),
     });
     if (!res.ok) return;
     const blob = await res.blob();
@@ -387,7 +393,7 @@ export default function Home() {
   async function analyze() {
     if (!file1) return;
     setState("loading"); setError(null); setShowAllFactors(false);
-    setPaid(false); setAnalysisId(null);
+    setPaid(false); setAnalysisId(null); setStripeSessionId(null);
     startRef.current = Date.now();
     const form = new FormData();
     form.append("file", file1);
@@ -410,7 +416,7 @@ export default function Home() {
   function reset() {
     setState("idle"); setResult(null); setFile1(null); setFile2(null);
     setError(null); setAnalysisTime(null); setShowAllFactors(false);
-    setAnalysisId(null); setPaid(false);
+    setAnalysisId(null); setPaid(false); setStripeSessionId(null);
   }
 
   const verdictColor = !result ? "" :
