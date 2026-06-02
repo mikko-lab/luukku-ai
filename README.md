@@ -8,8 +8,8 @@ Lataa isännöitsijäntodistus ja/tai tilinpäätös, saat riskianalyysin muutam
 - Luokittelee remontit (putkiremontti, julkisivu, katto...) domain-logiikalla
 - Laskee riskipisteen 0–10 ja antaa selkeän päätöksen: **ÄLÄ OSTA / HARKITSE TARKKAAN / HYVÄ KOHDE**
 - Tukee kahden dokumentin yhdistämistä — isännöitsijäntodistus + tilinpäätös
-- Generoi PDF-raportin välittäjälogolla
-- Kirjautuminen ja analyysikredittijärjestelmä toimistotason käyttöön
+- Yksittäinen kertaosto 14,90 € PDF-raportista — ei tilejä, ei kirjautumista
+- PDF toimitetaan sähköpostiin liitteenä + pysyvä lataus-linkki
 
 ## Arkkitehtuuri
 
@@ -26,8 +26,16 @@ PDF upload
   → repairClassificationService (major / minor / unknown + REPAIR_WEIGHTS)
   → confidenceService         (0–1 painotettu kenttäläsnäolo)
   → scoringService            (buildingRiskModel + REPAIR_IMPACT + talouslogiikka)
-  → db.$transaction           (kredit vähennetään + analysisLog kirjataan)
-  → API response              (verdict, risk_score, monthly_cost, factors, red_flags)
+  → db.analysisLog.create     (result_json + address tallennetaan paid=false-rivinä)
+  → API response              (verdict, risk_score, monthly_cost, factors, red_flags, analysisId)
+
+Paywall:
+  POST /api/checkout          (analysisId + email → Stripe Checkout)
+  POST /api/webhooks/stripe   (checkout.session.completed → atominen paid-flip
+                               + suora PDF-render + Resend-email +
+                               Idempotency-Key: analysis:<id>)
+  POST /api/report            (stripe_session_id → PDF jos paid=true)
+  GET  /api/checkout-status   (?session_id → polling hydratointiin)
 ```
 
 ## Teknologia
@@ -35,10 +43,10 @@ PDF upload
 - **Next.js 15** App Router, TypeScript
 - **Anthropic Claude Haiku** (`claude-haiku-4-5`) — LLM-ekstraktio
 - **pdf-parse** — PDF-tekstin purku
-- **Prisma + PostgreSQL** — käyttäjähallinta ja analyysien kirjaus
-- **bcryptjs + JWT** — autentikaatio, evästepohjaiset sessiot
-- **Stripe** — kertamaksu PDF-raportista
-- **Resend** — sähköpostitoimitus maksun jälkeen
+- **Prisma + PostgreSQL** — analyysien kirjaus + maksutila
+- **Stripe** — kertamaksu PDF-raportista, `stripe_session_id` toimii bearer-tokenina
+- **Resend** — sähköpostitoimitus + uudelleenlatauslinkki
+- **Upstash Redis** — per-IP rate-limit (valinnainen; ohitetaan jos puuttuu)
 - **PM2 + Nginx** — tuotantodeploy Hetzner VPS:llä
 
 ## Käynnistys
@@ -66,8 +74,7 @@ Pakolliset:
 |---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API-avain |
 | `DATABASE_URL` | Postgres connection string |
-| `DATABASE_URL_DIRECT` | Postgres connection ilman pgbouncer-poolia (Prisma migraatioille) |
-| `JWT_SECRET` | Vähintään 32-merkkinen satunnainen merkkijono sessiolle |
+| `DATABASE_URL_DIRECT` | Postgres connection ilman pgbouncer-poolia (Prisma db push:lle) |
 
 Stripe-maksu + email (vaaditaan tuotannossa):
 
@@ -76,16 +83,14 @@ Stripe-maksu + email (vaaditaan tuotannossa):
 | `STRIPE_SECRET_KEY` | `sk_test_…` dev:ssä, `sk_live_…` prodissa |
 | `STRIPE_WEBHOOK_SECRET` | Stripe-webhook-allekirjoituksen salasana |
 | `RESEND_API_KEY` | Resend API -avain PDF-raportin emailiin |
-| `NEXT_PUBLIC_BASE_URL` | Sovelluksen julkinen URL (Stripe success/cancel URL) |
+| `NEXT_PUBLIC_BASE_URL` | Sovelluksen julkinen URL (Stripe success/cancel URL + email-linkki) |
 
 Valinnaiset:
 
 | Muuttuja | Kuvaus |
 |---|---|
-| `COOKIE_SECURE` | `true` HTTPS-tuotannossa, `false` HTTP:llä |
 | `UPSTASH_REDIS_REST_URL` | Rate-limit (Upstash). Ei pakollinen — ratelimit ohitetaan jos puuttuu |
 | `UPSTASH_REDIS_REST_TOKEN` | Pari `UPSTASH_REDIS_REST_URL`:lle |
-| `ADMIN_KEY` | `x-admin-key`-header `/api/admin/add-credits` -reitille |
 
 ## Riskilogiikka
 
