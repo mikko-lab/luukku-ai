@@ -332,6 +332,7 @@ export default function Home() {
     window.history.replaceState({}, "", "/");
 
     async function hydrate() {
+      let paidConfirmed = false;
       while (!cancelled && attempts < maxAttempts) {
         attempts += 1;
         try {
@@ -341,23 +342,35 @@ export default function Home() {
           if (res.ok) {
             const data = await res.json();
             if (cancelled) return;
-            if (data.result) setResult(data.result);
             if (data.broker_logo) setBrokerLogo(data.broker_logo);
-            setState("done");
-            if (data.paid) {
+            if (data.paid) paidConfirmed = true;
+            if (data.paid && data.result) {
+              // Happy path: both paid and result available — show full UI
+              setResult(data.result);
+              setState("done");
               setPaid(true);
               setShowSuccessBanner(true);
               setPendingPayment(false);
               return;
             }
+            // paid=true but result_json not yet readable: keep polling
+            // paid=false: webhook hasn't set paid yet (shouldn't happen — row
+            //   only appears in DB after webhook fires with paid=true)
           }
-          // res.ok===false (404 etc.) = webhook hasn't landed yet, keep polling.
+          // 404: webhook hasn't landed yet, keep polling
         } catch {
           // network blip — fall through to retry
         }
         await new Promise((r) => setTimeout(r, intervalMs));
       }
-      if (!cancelled) setPendingPayment(false);
+      // Exhausted retries — show banner fallback so customer can still download
+      if (!cancelled) {
+        setPendingPayment(false);
+        if (paidConfirmed) {
+          setPaid(true);
+          setShowSuccessBanner(true);
+        }
+      }
     }
     hydrate();
     return () => {
@@ -478,9 +491,16 @@ export default function Home() {
 
       {showSuccessBanner && (
         <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-6 py-3 text-center">
-          <p className="text-sm text-emerald-400 font-medium">
-            Maksu onnistui — raportti lähetetään sähköpostiisi pian.
-            <button onClick={() => setShowSuccessBanner(false)} className="ml-3 text-emerald-400/60 hover:text-emerald-400 text-xs">✕</button>
+          <p className="text-sm text-emerald-400 font-medium flex items-center justify-center gap-3 flex-wrap">
+            <span>Maksu onnistui!</span>
+            <button
+              onClick={downloadReport}
+              className="underline font-bold hover:text-emerald-300 transition-colors"
+            >
+              Lataa raportti (PDF)
+            </button>
+            <span className="text-emerald-400/60 text-xs">· lähetetään myös sähköpostiin</span>
+            <button onClick={() => setShowSuccessBanner(false)} className="text-emerald-400/60 hover:text-emerald-400 text-xs">✕</button>
           </p>
         </div>
       )}
