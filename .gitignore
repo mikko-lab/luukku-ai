@@ -13,3 +13,5 @@ node_modules/
 *.sqlite
 *.sqlite-journal
 prisma/prod.db
+.vercel
+.env.vercel-prod
