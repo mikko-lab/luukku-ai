@@ -113,3 +113,7 @@ Pisteet 0–10, lähtöpiste 5.
 - ≥ 8 → ÄLÄ OSTA
 - ≥ 6 → HARKITSE TARKKAAN
 - < 6 → HYVÄ KOHDE
+
+## Kehitysideat
+
+- **Yhtiöjärjestyksen skannaus** — kolmas dokumenttityyppi isännöitsijäntodistuksen ja tilinpäätöksen rinnalle. Yhtiöjärjestyksestä voi poimia esim. lunastuslausekkeet, vuokrauskiellot, lemmikkirajoitukset ja muutostöiden rajoitukset — tekijöitä jotka vaikuttavat asunnon käytettävyyteen ja jälleenmyyntiarvoon mutta eivät näy talousasiakirjoissa.
